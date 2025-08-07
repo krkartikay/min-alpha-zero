@@ -23,12 +23,11 @@ include_directories(
 set(SOURCES
   alpha_zero.h
   evaluator.cpp
-  selfplay.cpp
   worker.cpp
 )
 
 # Main binary
-add_executable(min_alpha_zero main.cpp ${SOURCES})
+add_executable(alpha_zero main.cpp ${SOURCES})
 
 # absl libraries variable
 set(ABSL_LIBS
@@ -37,7 +36,7 @@ set(ABSL_LIBS
   absl::str_format
 )
 
-target_link_libraries(min_alpha_zero
+target_link_libraries(alpha_zero
   ${TORCH_LIBRARIES}
   ${ABSL_LIBS}
   ${Boost_LIBRARIES}
