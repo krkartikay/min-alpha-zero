@@ -26,19 +26,23 @@ set(SOURCES
 
 # Main binary
 add_executable(min_alpha_zero main.cpp ${SOURCES})
-target_link_libraries(min_alpha_zero
-  ${TORCH_LIBRARIES}
+
+# absl libraries variable
+set(ABSL_LIBS
   absl::time
   absl::strings
-  absl::synchronization
+  absl::str_format
+)
+
+target_link_libraries(min_alpha_zero
+  ${TORCH_LIBRARIES}
+  ${ABSL_LIBS}
 )
 
 # Test binary
 add_executable(test_all test_all.cpp ${SOURCES})
 target_link_libraries(test_all
   ${TORCH_LIBRARIES}
+  ${ABSL_LIBS}
   GTest::gtest_main
-  absl::time
-  absl::strings
-  absl::synchronization
 )
