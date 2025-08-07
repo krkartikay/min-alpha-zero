@@ -1,9 +1,4 @@
-#include <absl/strings/str_format.h>
-#include <absl/time/clock.h>
-#include <absl/time/time.h>
-#include <torch/torch.h>
-
-#include <iostream>
+#include "alpha_zero.h"
 
 int main() {
   absl::Time now = absl::Now();

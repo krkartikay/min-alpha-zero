@@ -19,6 +19,7 @@ include_directories(
 
 # Main source files (excluding test)
 set(SOURCES
+  alpha_zero.h
   evaluator.cpp
   selfplay.cpp
   worker.cpp
