@@ -7,7 +7,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
 # Required Libraries
 find_package(Torch REQUIRED)
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system fiber context)
 find_package(absl REQUIRED)
 find_package(GTest REQUIRED)
 
@@ -40,6 +40,7 @@ set(ABSL_LIBS
 target_link_libraries(min_alpha_zero
   ${TORCH_LIBRARIES}
   ${ABSL_LIBS}
+  ${Boost_LIBRARIES}
 )
 
 # Test binary
@@ -47,5 +48,6 @@ add_executable(test_all test_all.cpp ${SOURCES})
 target_link_libraries(test_all
   ${TORCH_LIBRARIES}
   ${ABSL_LIBS}
+  ${Boost_LIBRARIES}
   GTest::gtest_main
 )
