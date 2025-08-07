@@ -7,6 +7,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
 # Required Libraries
 find_package(Torch REQUIRED)
+find_package(Boost REQUIRED)
 find_package(absl REQUIRED)
 find_package(GTest REQUIRED)
 
@@ -14,6 +15,7 @@ find_package(GTest REQUIRED)
 include_directories(
   ${TORCH_INCLUDE_DIRS}
   ${absl_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS}
   ${CMAKE_SOURCE_DIR}
 )
 

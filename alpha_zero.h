@@ -3,6 +3,7 @@
 #include <absl/time/time.h>
 #include <torch/torch.h>
 
+#include <boost/algorithm/string.hpp>
 #include <iostream>
 
 #ifndef MIN_ALPHA_ZERO_H
