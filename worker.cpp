@@ -13,6 +13,7 @@ void Worker::run() {
 
 void Worker::work_on(int i) {
   // Send a request to the channel
+  std::cout << "Worker Sending request: " << i << std::endl;
   future<int> response = send_request(i);
   // Wait for the response
   int result = response.get();
