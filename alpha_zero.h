@@ -18,7 +18,9 @@ using boost::fibers::channel_op_status;
 using boost::fibers::future;
 using boost::fibers::promise;
 
-using eval_request_t = std::pair<int, boost::fibers::promise<int>>;
+struct Node;
+
+using eval_request_t = std::pair<Node*, boost::fibers::promise<void>>;
 using eval_channel_t = boost::fibers::buffered_channel<eval_request_t>;
 
 // Constants -------------------------------------------------
@@ -34,8 +36,21 @@ inline eval_channel_t g_evaluation_queue(kChannelSize);
 
 struct Node {
   chess::Board board;
-  float value;
-  std::array<float, kNumActions> policy;
+  bool is_evaluated = false;
+  bool is_leaf = false;
+  int visit_count = 0;
+  float value = 0.0f;
+  std::array<float, kNumActions> policy = {};
+  // Child node map, move idx -> Node*, Lazily initialized
+  std::map<int, std::unique_ptr<Node>> child_nodes;
+  Node* getChildNode(int move_idx);
+  // Constructor
+  Node(const chess::Board& board = chess::Board()) : board(board) {}
+};
+
+struct GameTree {
+  GameTree();
+  std::unique_ptr<Node> root;
 };
 
 // Evaluator thread ------------------------------------------
@@ -45,8 +60,8 @@ void run_evaluator();
 // Worker thread ---------------------------------------------
 
 void run_worker();
-future<int> send_request(int request);
-void work_on(int i);
+future<void> send_request(Node* node);
+void work_on(const GameTree& game_tree);
 
 // -----------------------------------------------------------
 
