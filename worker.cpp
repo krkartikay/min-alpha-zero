@@ -3,15 +3,15 @@
 namespace alphazero {
 
 // Worker thread main loop
-void Worker::run() {
+void run_worker() {
   // Starts a number of fibers, each one sends as many requests
   // to the channel as possible.
   for (int i = 0; i < 100; ++i) {
-    boost::fibers::fiber([this, i]() { work_on(i); }).detach();
+    boost::fibers::fiber([i]() { work_on(i); }).detach();
   }
 }
 
-void Worker::work_on(int i) {
+void work_on(int i) {
   // Send a request to the channel
   std::cout << "Worker Sending request: " << i << std::endl;
   future<int> response = send_request(i);
@@ -21,13 +21,13 @@ void Worker::work_on(int i) {
   std::cout << "Worker sent: " << i << " and got: " << result << std::endl;
 }
 
-future<int> Worker::send_request(int request) {
+future<int> send_request(int request) {
   // Create a promise and future pair
   promise<int> promise;
   future<int> future = promise.get_future();
 
   // Send the request to the channel
-  channel_.push(std::make_pair(request, std::move(promise)));
+  g_evaluation_queue.push(std::make_pair(request, std::move(promise)));
   return future;
 }
 

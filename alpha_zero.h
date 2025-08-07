@@ -19,26 +19,22 @@ using boost::fibers::promise;
 using eval_request_t = std::pair<int, boost::fibers::promise<int>>;
 using eval_channel_t = boost::fibers::buffered_channel<eval_request_t>;
 
-class Evaluator {
- public:
-  Evaluator(eval_channel_t& channel) : channel_(channel) {}
-  void run();
+// Global Position Evaluation queue --------------------------
 
- private:
-  eval_channel_t& channel_;
-};
+constexpr int kChannelSize = 128;  // Must be a power of 2!
+inline eval_channel_t g_evaluation_queue(kChannelSize);
 
-class Worker {
- public:
-  Worker(eval_channel_t& channel) : channel_(channel) {}
-  void run();
-  void work_on(int i);
+// Evaluator thread ------------------------------------------
 
-  future<int> send_request(int request);
+void run_evaluator();
 
- private:
-  eval_channel_t& channel_;
-};
+// Worker thread ---------------------------------------------
+
+void run_worker();
+future<int> send_request(int request);
+void work_on(int i);
+
+// -----------------------------------------------------------
 
 }  // namespace alphazero
 
