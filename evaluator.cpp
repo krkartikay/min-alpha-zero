@@ -38,8 +38,6 @@ std::vector<eval_request_t> get_requests_batch() {
 }
 
 void process_batch(std::vector<eval_request_t> nodes) {
-  // std::cout << absl::StrFormat("Processing batch of %d nodes", nodes.size())
-  //           << std::endl;
   // Copy Tensors into a single batch tensor
   const size_t batch_size = nodes.size();
   torch::Tensor input = torch::empty({int(batch_size), 7, 8, 8},

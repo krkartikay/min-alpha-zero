@@ -52,7 +52,7 @@ inline eval_channel_t g_evaluation_queue(kChannelSize);
 // Game Tree functions ---------------------------------------
 
 struct Node {
-  chess::Board board;
+  const chess::Board board;
   Node* parent = nullptr;
   bool is_evaluated = false;
   bool is_leaf = false;
@@ -99,6 +99,9 @@ void run_worker();
 void evaluate(Node& node);
 
 // Logging and Debugging ---------------------------------
+
+#define log(fmt, ...) \
+  std::cout << absl::StrFormat("%s " fmt "\n", timestamp(), ##__VA_ARGS__)
 
 // add time with absl str format in the format [HH:MM:SS.sss]
 std::string timestamp();

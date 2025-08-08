@@ -20,9 +20,6 @@ void self_play(GameTree& game_tree) {
   while (true) {
     // select move
     select_move(game_tree);
-    std::cout << timestamp() << " One move played." << std::endl;
-    // for now just resetting the game tree
-    g_game_tree.root = std::make_unique<Node>();
   }
 }
 
@@ -41,7 +38,35 @@ void select_move(GameTree& game_tree) {
     fiber.join();
   }
 
-  // Now we would select the best move based on visit counts at root node
+  // Calculate visit counts at root
+  std::array<int, kNumActions> visit_counts = {};
+  for (int i = 0; i < kNumActions; ++i) {
+    Node* child = game_tree.root->getChildNode(i);
+    if (child == nullptr) continue;  // illegal move
+    visit_counts[i] = child->visit_count;
+  }
+
+  // Sample an action based on visit counts
+  std::discrete_distribution<int> dist(visit_counts.begin(),
+                                       visit_counts.end());
+  int action = dist(g_rng);
+  log("Selected action: %d with (%d) visits", action, visit_counts[action]);
+
+  if (!game_tree.root->legal_mask[action]) {
+    log("Illegal move selected: %d", action);
+    return;  // Illegal move, do not proceed
+  }
+
+  // For logging:
+  chess::Move move = int_to_move(action, game_tree.root->board);
+  std::string move_str = chess::uci::moveToSan(game_tree.root->board, move);
+
+  // Update root node to the selected child
+  std::unique_ptr<Node> chosen_child =
+      std::move(game_tree.root->child_nodes[action]);
+  game_tree.root = std::move(chosen_child);
+  game_tree.root->parent = nullptr;  // Reset parent to null
+  log("Move played: %s", move_str);
 }
 
 // Run MCTS simulation
@@ -108,6 +133,11 @@ Node::Node(const chess::Board& board) : board(board) {
 }
 
 Node* Node::getChildNode(int move_idx) {
+  if (!legal_mask[move_idx]) {
+    // If the move is not legal, return nullptr
+    return nullptr;
+  }
+
   // Lazy initialization of nodes
   auto it = child_nodes.find(move_idx);
   if (it != child_nodes.end()) {
