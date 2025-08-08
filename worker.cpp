@@ -3,6 +3,7 @@
 namespace alphazero {
 
 GameTree g_game_tree;
+std::mt19937 g_rng;  // Random number generator for MCTS
 
 // Worker thread main loop
 void run_worker() {
@@ -34,12 +35,44 @@ void select_move(GameTree& game_tree) {
   // Now we would select the best move based on visit counts at root node
 }
 
+// Run MCTS simulation
+// Finds a node that is as yet unevaluated and evaluates it,
+// And then backpropagates the result.
 void run_simulation(GameTree& game_tree) {
-  // Run MCTS simulations to select a move
-  // This is where the actual MCTS logic would go
-  // For now, we just evaluate the root node
-  std::cout << "Running simulation on root node." << std::endl;
-  evaluate(*game_tree.root);
+  Node* current_node = game_tree.root.get();
+  std::vector<Node*> path;
+
+  // walk down to unevaluated node
+  while (current_node->is_evaluated) {
+    path.push_back(current_node);
+    if (current_node->is_leaf) break;
+    current_node = select_child(*current_node);
+  }
+
+  // evaluate node
+  evaluate(*current_node);
+  current_node->visit_count++;
+
+  // backpropagate the result
+  while (!path.empty()) {
+    Node* last = path.back();
+    path.pop_back();
+    last->visit_count++;
+  }
+}
+
+Node* select_child(Node& node) {
+  // Gather legal actions
+  std::vector<int> legal_moves;
+  legal_moves.reserve(kNumActions);
+  for (int a = 0; a < kNumActions; ++a)
+    if (node.legal_mask[a]) legal_moves.push_back(a);
+  if (legal_moves.empty()) return nullptr;  // no children
+  std::uniform_int_distribution<int> dist(
+      0, static_cast<int>(legal_moves.size()) - 1);
+  int idx = dist(g_rng);
+  int move = legal_moves[idx];
+  return node.getChildNode(move);
 }
 
 // -----------------------------------------------------------
@@ -47,6 +80,19 @@ void run_simulation(GameTree& game_tree) {
 GameTree::GameTree() {
   // Initialize the root node
   root = std::make_unique<Node>();
+}
+
+Node::Node(const chess::Board& board) : board(board) {
+  // also sets legal mask and is_leaf flag
+  chess::Movelist movelist;
+  chess::movegen::legalmoves(movelist, board);
+  if (movelist.empty()) {
+    is_leaf = true;
+  }
+  for (chess::Move move : movelist) {
+    int move_idx = move_to_int(move);
+    legal_mask[move_idx] = true;
+  }
 }
 
 Node* Node::getChildNode(int move_idx) {
@@ -66,6 +112,7 @@ Node* Node::getChildNode(int move_idx) {
 // -----------------------------------------------------------
 
 void evaluate(Node& node) {
+  std::cout << "Evaluating node at " << &node << std::endl;
   // Create a promise and future pair
   promise<void> promise;
   future<void> future = promise.get_future();

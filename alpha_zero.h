@@ -44,12 +44,18 @@ struct Node {
   bool is_leaf = false;
   int visit_count = 0;
   float value = 0.0f;
+  std::array<bool, kNumActions> legal_mask = {};
   std::array<float, kNumActions> policy = {};
   // Child node map, move idx -> Node*, Lazily initialized
   std::map<int, std::unique_ptr<Node>> child_nodes;
   Node* getChildNode(int move_idx);
-  // Constructor
-  Node(const chess::Board& board = chess::Board()) : board(board) {}
+  // Constructor, sets legal_mask and is_leaf
+  Node(const chess::Board& board = chess::Board());
+  // No copy or move
+  Node(const Node&) = delete;
+  Node& operator=(const Node&) = delete;
+  Node(Node&&) = default;
+  Node& operator=(Node&&) = default;
 };
 
 struct GameTree {
@@ -61,6 +67,7 @@ struct GameTree {
 void self_play(GameTree& game_tree);
 void select_move(GameTree& game_tree);
 void run_simulation(GameTree& game_tree);
+Node* select_child(Node& node);
 
 // Evaluator thread ------------------------------------------
 
