@@ -112,7 +112,9 @@ Node* Node::getChildNode(int move_idx) {
   std::unique_ptr<Node> new_node = std::make_unique<Node>(new_board);
   new_node->parent = this;
   new_node->move_history =
-      absl::StrCat(move_history, " ", chess::uci::moveToSan(board, move));
+      move_history.empty()
+          ? chess::uci::moveToSan(board, move)
+          : absl::StrCat(move_history, " ", chess::uci::moveToSan(board, move));
   Node* new_node_ptr = new_node.get();
   child_nodes[move_idx] = std::move(new_node);
   return new_node_ptr;
