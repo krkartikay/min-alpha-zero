@@ -124,7 +124,7 @@ void evaluate(Node& node) {
   // Ensure no other fibers are processing this node
   std::unique_lock<mutex> lock(node.is_processing_mutex);
 
-  std::cout << "Evaluating node " << node.move_history << std::endl;
+  std::cout << "Evaluating node [" << node.move_history << "]" << std::endl;
 
   // Create a promise and future pair
   promise<void> promise;
