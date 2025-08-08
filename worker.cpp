@@ -17,8 +17,13 @@ void run_worker() {
 
 // Selects moves on game tree then makes the move until game is finished
 void self_play(GameTree& game_tree) {
-  // select move
-  select_move(game_tree);
+  while (true) {
+    // select move
+    select_move(game_tree);
+    std::cout << timestamp() << " One move played." << std::endl;
+    // for now just resetting the game tree
+    g_game_tree.root = std::make_unique<Node>();
+  }
 }
 
 void select_move(GameTree& game_tree) {
@@ -26,10 +31,14 @@ void select_move(GameTree& game_tree) {
 
   // Runs N number of simulations to select a move to play
   // All simulations are run on a boost fiber!
+  // Store fibers so we can join them later
+  std::vector<boost::fibers::fiber> fibers;
   for (int i = 0; i < kNumSimulations; ++i) {
-    boost::fibers::fiber([&game_tree]() {
-      run_simulation(game_tree);
-    }).detach();  // Detach the fiber to run it asynchronously
+    fibers.emplace_back([&game_tree]() { run_simulation(game_tree); });
+  }
+  // Join all fibers
+  for (auto& fiber : fibers) {
+    fiber.join();
   }
 
   // Now we would select the best move based on visit counts at root node
@@ -126,8 +135,6 @@ void evaluate(Node& node) {
   // Ensure no other fibers are processing this node
   std::unique_lock<mutex> lock(node.is_processing_mutex);
 
-  std::cout << "Evaluating node [" << node.move_history << "]" << std::endl;
-
   // Create a promise and future pair
   promise<void> promise;
   future<void> future = promise.get_future();
@@ -137,6 +144,13 @@ void evaluate(Node& node) {
 
   // Wait for evaluation to complete
   future.get();
+}
+
+// -----------------------------------------------------------
+
+std::string timestamp() {
+  return absl::FormatTime("[%H:%M:%S.%E3S]", absl::Now(),
+                          absl::LocalTimeZone());
 }
 
 // -----------------------------------------------------------

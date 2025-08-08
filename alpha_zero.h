@@ -35,7 +35,7 @@ using duration_t = std::chrono::duration<int, std::milli>;
 const int kChannelSize = 128;           // Must be a power of 2!
 const int kNumSimulations = 200;        // Number of MCTS simulations per move
 const int kBatchSize = 1000;            // Number of nodes to process at once
-const duration_t kEvalTimeout = 100ms;  // Timeout for evaluation requests
+const duration_t kEvalTimeout = 1ms;    // Timeout for evaluation requests
 
 // Constants -------------------------------------------------
 
@@ -92,6 +92,11 @@ void process_batch(std::vector<eval_request_t> nodes);
 
 void run_worker();
 void evaluate(Node& node);
+
+// Logging and Debugging ---------------------------------
+
+// add time with absl str format in the format [HH:MM:SS.sss]
+std::string timestamp();
 
 // -----------------------------------------------------------
 

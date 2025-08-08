@@ -32,7 +32,7 @@ std::vector<eval_request_t> get_requests_batch() {
 void process_batch(std::vector<eval_request_t> nodes) {
   std::cout << absl::StrFormat("Processing batch of %d nodes", nodes.size())
             << std::endl;
-  absl::SleepFor(absl::Milliseconds(100));
+  absl::SleepFor(absl::Milliseconds(1));
   for (auto& [node, p] : nodes) {
     node->is_evaluated = true;
     p.set_value();
