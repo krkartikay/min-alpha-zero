@@ -50,7 +50,11 @@ void run_simulation(GameTree& game_tree) {
   }
 
   // evaluate node
-  evaluate(*current_node);
+  // we could reach an unevaluated node
+  // or a leaf node, even if it is already evaluated
+  if (!current_node->is_evaluated) {
+    evaluate(*current_node);
+  }
   current_node->visit_count++;
 
   // backpropagate the result
