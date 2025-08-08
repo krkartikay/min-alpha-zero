@@ -38,6 +38,8 @@ const int kNumSimulations = 200;        // Number of MCTS simulations per move
 const int kBatchSize = 1000;            // Number of nodes to process at once
 const duration_t kEvalTimeout = 1ms;    // Timeout for evaluation requests
 const std::string kModelPath = "model.pt";  // Path to the model file
+const std::string kTrainingFile =
+    "training_data.pt";  // File to store training data
 
 // Constants -------------------------------------------------
 
@@ -75,16 +77,31 @@ struct Node {
   std::string move_history;
 };
 
-struct GameTree {
-  GameTree();
+// For storing training data
+struct GameState {
+  // Board tensor at current state
+  std::array<float, kInputSize> board_tensor = {};
+  // Policy vector at current state
+  std::array<float, kNumActions> policy = {};
+  // Value of current move (will be +/- 1 or 0)
+  float value = 0.0f;
+};
+
+struct Game {
+  Game();
   std::unique_ptr<Node> root;
+  std::vector<GameState> history;
+  // These two will be populated at the end of the game.
+  chess::GameResultReason result = chess::GameResultReason::NONE;
+  chess::Color side_to_move = chess::Color::WHITE;
 };
 
 // Runs N number of MCTS simulations to select a move to play
-void self_play(GameTree& game_tree);
-void select_move(GameTree& game_tree);
-void run_simulation(GameTree& game_tree);
+void self_play(Game& game);
+int select_move(Game& game);
+void run_simulation(Game& game);
 Node* select_child(Node& node);
+void append_to_training_file(const Game& game);
 
 // Evaluator thread ------------------------------------------
 
