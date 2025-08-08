@@ -31,32 +31,57 @@ void self_play(Game& game) {
     // For logging:
     chess::Move move = int_to_move(action, game.root->board);
     std::string move_str = chess::uci::moveToSan(game.root->board, move);
+    log("Move played: %s", move_str);
+
+    update_root(game, action);
 
     // Save game state at current position.
-    game.history.emplace_back(
-        GameState{chess::board_to_tensor(game.root->board), game.root->policy,
-                  game.root->value});
+    save_game_state(game);
 
-    // Update root node to the selected child
-    std::unique_ptr<Node> chosen_child =
-        std::move(game.root->child_nodes[action]);
-    game.root = std::move(chosen_child);
-    game.root->parent = nullptr;  // Reset parent to null
-
-    log("Move played: %s", move_str);
     moves_played++;
+    is_game_over = game.root->is_leaf;
 
-    // print game state
     log("Current board state:\n%s", chess::board_to_string(game.root->board));
-    is_game_over =
-        game.root->board.isGameOver().first != chess::GameResultReason::NONE;
   }
 
-  // At the end of the game, update result and side to move
-  // and then write data to training file.
-  game.result = game.root->board.isGameOver().first;
-  game.side_to_move = game.root->board.sideToMove();
+  // At the end of the game note final winner and write to training file.
+  update_game_history(game);
   append_to_training_file(game);
+  log("Game finished. Moves played: %d, Final value: %d", moves_played,
+      game.history[0].final_value);
+}
+
+void update_root(Game& game, int action) {
+  // Update root node to the selected child
+  std::unique_ptr<Node> chosen_child =
+      std::move(game.root->child_nodes[action]);
+  game.root = std::move(chosen_child);
+  game.root->parent = nullptr;  // Reset parent to null
+}
+
+void save_game_state(Game& game) {
+  game.history.emplace_back();
+  game.history.back().board_tensor = chess::board_to_tensor(game.root->board);
+  game.history.back().policy = game.root->policy;
+  game.history.back().value = game.root->value;
+  game.history.back().child_visit_counts = {};
+  for (const auto& [move_idx, child_node] : game.root->child_nodes) {
+    game.history.back().child_visit_counts[move_idx] = child_node->visit_count;
+  }
+}
+
+void update_game_history(Game& game) {
+  auto result = game.root->board.isGameOver();
+  chess::Color side_to_move = game.root->board.sideToMove();
+  bool is_draw = result.second == chess::GameResult::DRAW;
+  bool is_white_won = side_to_move == chess::Color::BLACK;
+  int final_value = is_draw        ? 0    // Draw
+                    : is_white_won ? 1    // White won, Black lost
+                                   : -1;  // Black lost, White won
+  for (int i = 0; i < game.history.size(); ++i) {
+    game.history[i].final_value = final_value;
+    final_value = -final_value;  // Reverse for the other side
+  }
 }
 
 int select_move(Game& game) {
@@ -187,48 +212,27 @@ Node* Node::getChildNode(int move_idx) {
 }
 
 // -----------------------------------------------------------
+// clang-format off
 
 void append_to_training_file(const Game& game) {
-  const int N = game.history.size();
-
-  // Pack history as contiguous tensors
-  torch::Tensor boards = torch::empty({N, kInputSize}, torch::kFloat32);
-  torch::Tensor policies = torch::empty({N, kNumActions}, torch::kFloat32);
-  torch::Tensor values = torch::empty({N}, torch::kFloat32);
-
-  float* bptr = boards.data_ptr<float>();
-  float* pptr = policies.data_ptr<float>();
-  float* vptr = values.data_ptr<float>();
-
-  for (int i = 0; i < N; ++i) {
-    const auto& s = game.history[i];
-    std::memcpy(bptr + i * kInputSize, s.board_tensor.data(),
-                kInputSize * sizeof(float));
-    std::memcpy(pptr + i * kNumActions, s.policy.data(),
-                kNumActions * sizeof(float));
-    vptr[i] = s.value;
+  FILE* fp = std::fopen(kTrainingFile.c_str(), "ab");
+  if (!fp) throw std::runtime_error("open failed: " + kTrainingFile);
+  for (const auto& s : game.history) {
+    bool err = false;
+    err |= (std::fwrite(s.board_tensor.data()      , sizeof(float), kInputSize , fp) != kInputSize);
+    err |= (std::fwrite(s.policy.data()            , sizeof(float), kNumActions, fp) != kNumActions);
+    err |= (std::fwrite(s.child_visit_counts.data(), sizeof(int)  , kNumActions, fp) != kNumActions);
+    err |= (std::fwrite(&s.value                   , sizeof(float), 1          , fp) != 1);
+    err |= (std::fwrite(&s.final_value             , sizeof(int)  , 1          , fp) != 1);
+    if (err) {
+      std::fclose(fp);
+      throw std::runtime_error("short write");
+    }
   }
-
-  // Scalar metadata (store as 0-dim/int64 tensors for portability)
-  torch::Tensor result_t = torch::tensor(int(game.result), torch::kInt64);
-  torch::Tensor side_t = torch::tensor(int(game.side_to_move), torch::kInt64);
-
-  // One “record” = map of named tensors (easy to read in Python)
-  torch::serialize::OutputArchive ar;
-  ar.write("boards", boards);
-  ar.write("policies", policies);
-  ar.write("values", values);
-  ar.write("result_reason", result_t);
-  ar.write("side_to_move", side_t);
-
-  // Append this record to the file
-  std::ofstream ofs(kTrainingFile, std::ios::binary | std::ios::app);
-  TORCH_CHECK(ofs.good(),
-              "Failed to open training file for append: ", kTrainingFile);
-  ar.save_to(ofs);
-  ofs.close();
+  std::fclose(fp);
 }
 
+// clang-format on
 // -----------------------------------------------------------
 
 void evaluate(Node& node) {

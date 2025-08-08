@@ -39,7 +39,7 @@ const int kBatchSize = 1000;            // Number of nodes to process at once
 const duration_t kEvalTimeout = 1ms;    // Timeout for evaluation requests
 const std::string kModelPath = "model.pt";  // Path to the model file
 const std::string kTrainingFile =
-    "training_data.pt";  // File to store training data
+    "training_data.bin";  // File to store training data
 
 // Constants -------------------------------------------------
 
@@ -81,23 +81,27 @@ struct Node {
 struct GameState {
   // Board tensor at current state
   std::array<float, kInputSize> board_tensor = {};
-  // Policy vector at current state
+  // Policy vector at current state (as predicted by the model)
   std::array<float, kNumActions> policy = {};
-  // Value of current move (will be +/- 1 or 0)
+  // Value of current move (as predicted by the model)
   float value = 0.0f;
+  // Child visit counts (in policy order)
+  std::array<int, kNumActions> child_visit_counts = {};
+  // Final value (will be set at the end of the game)
+  int final_value = 0;
 };
 
 struct Game {
   Game();
   std::unique_ptr<Node> root;
   std::vector<GameState> history;
-  // These two will be populated at the end of the game.
-  chess::GameResultReason result = chess::GameResultReason::NONE;
-  chess::Color side_to_move = chess::Color::WHITE;
 };
 
 // Runs N number of MCTS simulations to select a move to play
 void self_play(Game& game);
+void update_root(Game& game, int action);
+void save_game_state(Game& game);
+void update_game_history(Game& game);
 int select_move(Game& game);
 void run_simulation(Game& game);
 Node* select_child(Node& node);
