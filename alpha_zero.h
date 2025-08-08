@@ -1,4 +1,5 @@
 #include <absl/strings/str_format.h>
+#include <absl/strings/str_join.h>
 #include <absl/time/clock.h>
 #include <absl/time/time.h>
 #include <torch/torch.h>
@@ -16,6 +17,7 @@ namespace alphazero {
 using boost::fibers::buffered_channel;
 using boost::fibers::channel_op_status;
 using boost::fibers::future;
+using boost::fibers::mutex;
 using boost::fibers::promise;
 
 struct Node;
@@ -40,12 +42,14 @@ inline eval_channel_t g_evaluation_queue(kChannelSize);
 
 struct Node {
   chess::Board board;
+  Node* parent = nullptr;
   bool is_evaluated = false;
   bool is_leaf = false;
   int visit_count = 0;
   float value = 0.0f;
   std::array<bool, kNumActions> legal_mask = {};
   std::array<float, kNumActions> policy = {};
+  mutex is_processing_mutex;
   // Child node map, move idx -> Node*, Lazily initialized
   std::map<int, std::unique_ptr<Node>> child_nodes;
   Node* getChildNode(int move_idx);
@@ -56,6 +60,9 @@ struct Node {
   Node& operator=(const Node&) = delete;
   Node(Node&&) = default;
   Node& operator=(Node&&) = default;
+  // For debugging purposes Only
+  std::optional<chess::Move> last_move;
+  std::string history();
 };
 
 struct GameTree {

@@ -40,11 +40,11 @@ void select_move(GameTree& game_tree) {
 // And then backpropagates the result.
 void run_simulation(GameTree& game_tree) {
   Node* current_node = game_tree.root.get();
-  std::vector<Node*> path;
 
   // walk down to unevaluated node
-  while (current_node->is_evaluated) {
-    path.push_back(current_node);
+  while (true) {
+    std::unique_lock<mutex> lock(current_node->is_processing_mutex);
+    if (!current_node->is_evaluated) break;
     if (current_node->is_leaf) break;
     current_node = select_child(*current_node);
   }
@@ -54,10 +54,9 @@ void run_simulation(GameTree& game_tree) {
   current_node->visit_count++;
 
   // backpropagate the result
-  while (!path.empty()) {
-    Node* last = path.back();
-    path.pop_back();
-    last->visit_count++;
+  while (current_node->parent != nullptr) {
+    current_node = current_node->parent;
+    current_node->visit_count++;
   }
 }
 
@@ -104,6 +103,8 @@ Node* Node::getChildNode(int move_idx) {
 
   // Create a new node if it doesn't exist
   std::unique_ptr<Node> new_node = std::make_unique<Node>();
+  new_node->parent = this;
+  new_node->last_move = int_to_move(move_idx, board);
   Node* new_node_ptr = new_node.get();
   child_nodes[move_idx] = std::move(new_node);
   return new_node_ptr;
@@ -111,8 +112,28 @@ Node* Node::getChildNode(int move_idx) {
 
 // -----------------------------------------------------------
 
+std::string Node::history() {
+  std::string history_str;
+  std::vector<std::string> moves;
+  for (const Node* current = this; current != nullptr;
+       current = current->parent) {
+    if (current->last_move.has_value()) {
+      moves.push_back(chess::uci::moveToUci(*current->last_move));
+    }
+  }
+  std::reverse(moves.begin(), moves.end());
+  history_str = absl::StrJoin(moves, " ");
+  return history_str;
+}
+
+// -----------------------------------------------------------
+
 void evaluate(Node& node) {
-  std::cout << "Evaluating node at " << &node << std::endl;
+  // Ensure no other fibers are processing this node
+  std::unique_lock<mutex> lock(node.is_processing_mutex);
+
+  std::cout << "Evaluating node " << node.history() << std::endl;
+
   // Create a promise and future pair
   promise<void> promise;
   future<void> future = promise.get_future();
