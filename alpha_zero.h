@@ -10,6 +10,7 @@
 #include <chess_utils.hpp>
 #include <chrono>
 #include <iostream>
+#include <span>
 
 #ifndef ALPHA_ZERO_H
 #define ALPHA_ZERO_H

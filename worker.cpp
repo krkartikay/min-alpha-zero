@@ -212,27 +212,33 @@ Node* Node::getChildNode(int move_idx) {
 }
 
 // -----------------------------------------------------------
-// clang-format off
+// Write game data to training file
 
-void append_to_training_file(const Game& game) {
-  FILE* fp = std::fopen(kTrainingFile.c_str(), "ab");
-  if (!fp) throw std::runtime_error("open failed: " + kTrainingFile);
-  for (const auto& s : game.history) {
-    bool err = false;
-    err |= (std::fwrite(s.board_tensor.data()      , sizeof(float), kInputSize , fp) != kInputSize);
-    err |= (std::fwrite(s.policy.data()            , sizeof(float), kNumActions, fp) != kNumActions);
-    err |= (std::fwrite(s.child_visit_counts.data(), sizeof(int)  , kNumActions, fp) != kNumActions);
-    err |= (std::fwrite(&s.value                   , sizeof(float), 1          , fp) != 1);
-    err |= (std::fwrite(&s.final_value             , sizeof(int)  , 1          , fp) != 1);
-    if (err) {
-      std::fclose(fp);
-      throw std::runtime_error("short write");
-    }
-  }
-  std::fclose(fp);
+template <class T>
+static void write_bin(std::ofstream& out, const T& v) {
+  auto bytes = std::as_bytes(std::span{&v, 1});
+  out.write((char*)(bytes.data()), bytes.size());
 }
 
-// clang-format on
+template <class T, std::size_t N>
+static void write_bin(std::ofstream& out, const std::array<T, N>& a) {
+  auto bytes = std::as_bytes(std::span{a});
+  out.write((char*)(bytes.data()), bytes.size());
+}
+
+void append_to_training_file(const Game& game) {
+  std::ofstream out(kTrainingFile, std::ios::binary | std::ios::app);
+  if (!out) throw std::runtime_error("open failed: " + kTrainingFile);
+
+  for (const auto& s : game.history) {
+    write_bin(out, s.board_tensor);
+    write_bin(out, s.policy);
+    write_bin(out, s.child_visit_counts);
+    write_bin(out, s.value);
+    write_bin(out, s.final_value);
+  }
+}
+
 // -----------------------------------------------------------
 
 void evaluate(Node& node) {
