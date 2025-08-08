@@ -52,6 +52,12 @@ inline chess::Move int_to_move(int move_int, const chess::Board& board) {
   return chess::Move::make(chess::Square(from), chess::Square(to));
 }
 
+inline std::string board_to_string(const chess::Board& board) {
+  std::ostringstream oss;
+  oss << board;
+  return oss.str();
+}
+
 }  // namespace chess
 
 #endif  // CHESS_UTILS_HPP

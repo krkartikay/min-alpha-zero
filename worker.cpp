@@ -2,13 +2,17 @@
 
 namespace alphazero {
 
-GameTree g_game_tree;
 std::mt19937 g_rng;  // Random number generator for MCTS
 
 // Worker thread main loop
 void run_worker() {
-  // For now just runs self play on one game_tree
-  self_play(g_game_tree);
+  int game_number = 0;
+  while (true) {
+    // For now just runs self play on one game_tree
+    GameTree game_tree;
+    self_play(game_tree);
+    log("Game %d finished.", game_number++);
+  }
 }
 
 // -----------------------------------------------------------
@@ -17,9 +21,18 @@ void run_worker() {
 
 // Selects moves on game tree then makes the move until game is finished
 void self_play(GameTree& game_tree) {
-  while (true) {
+  // Keep going while the game is not over
+  bool is_game_over = false;
+  int moves_played = 0;
+  while (!is_game_over && moves_played < 100) {
     // select move
     select_move(game_tree);
+    moves_played++;
+    // print game state
+    log("Current board state:\n%s",
+        chess::board_to_string(game_tree.root->board));
+    is_game_over = game_tree.root->board.isGameOver().first !=
+                   chess::GameResultReason::NONE;
   }
 }
 
