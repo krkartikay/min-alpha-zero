@@ -102,9 +102,12 @@ Node* Node::getChildNode(int move_idx) {
   }
 
   // Create a new node if it doesn't exist
-  std::unique_ptr<Node> new_node = std::make_unique<Node>();
+  chess::Board new_board = board;
+  chess::Move move = int_to_move(move_idx, board);
+  new_board.makeMove(move);
+  std::unique_ptr<Node> new_node = std::make_unique<Node>(new_board);
   new_node->parent = this;
-  new_node->last_move = int_to_move(move_idx, board);
+  new_node->last_move = move;
   Node* new_node_ptr = new_node.get();
   child_nodes[move_idx] = std::move(new_node);
   return new_node_ptr;
@@ -118,7 +121,8 @@ std::string Node::history() {
   for (const Node* current = this; current != nullptr;
        current = current->parent) {
     if (current->last_move.has_value()) {
-      moves.push_back(chess::uci::moveToUci(*current->last_move));
+      moves.push_back(
+          chess::uci::moveToSan(current->parent->board, *current->last_move));
     }
   }
   std::reverse(moves.begin(), moves.end());
