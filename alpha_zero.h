@@ -23,13 +23,17 @@ struct Node;
 using eval_request_t = std::pair<Node*, boost::fibers::promise<void>>;
 using eval_channel_t = boost::fibers::buffered_channel<eval_request_t>;
 
+// Config ----------------------------------------------------
+
+const int kChannelSize = 128;     // Must be a power of 2!
+const int kNumSimulations = 200;  // Number of MCTS simulations per move
+
 // Constants -------------------------------------------------
 
 constexpr int kNumActions = 64 * 64;
 
 // Global Position Evaluation queue --------------------------
 
-const int kChannelSize = 128;  // Must be a power of 2!
 inline eval_channel_t g_evaluation_queue(kChannelSize);
 
 // Game Tree functions ---------------------------------------
@@ -53,6 +57,11 @@ struct GameTree {
   std::unique_ptr<Node> root;
 };
 
+// Runs N number of MCTS simulations to select a move to play
+void self_play(GameTree& game_tree);
+void select_move(GameTree& game_tree);
+void run_simulation(GameTree& game_tree);
+
 // Evaluator thread ------------------------------------------
 
 void run_evaluator();
@@ -60,8 +69,7 @@ void run_evaluator();
 // Worker thread ---------------------------------------------
 
 void run_worker();
-future<void> send_request(Node* node);
-void work_on(const GameTree& game_tree);
+void evaluate(Node& node);
 
 // -----------------------------------------------------------
 

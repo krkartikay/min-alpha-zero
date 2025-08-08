@@ -6,33 +6,40 @@ GameTree g_game_tree;
 
 // Worker thread main loop
 void run_worker() {
-  // TODO: LEFT OFF HERE
-  // Starts a number of fibers, each one sends as many requests
-  // to the channel as possible.
-  for (int i = 0; i < 100; ++i) {
-    boost::fibers::fiber([i]() { work_on(g_game_tree); }).detach();
+  // For now just runs self play on one game_tree
+  self_play(g_game_tree);
+}
+
+// -----------------------------------------------------------
+
+// Self play logic
+
+// Selects moves on game tree then makes the move until game is finished
+void self_play(GameTree& game_tree) {
+  // select move
+  select_move(game_tree);
+}
+
+void select_move(GameTree& game_tree) {
+  // MCTS move selection process
+
+  // Runs N number of simulations to select a move to play
+  // All simulations are run on a boost fiber!
+  for (int i = 0; i < kNumSimulations; ++i) {
+    boost::fibers::fiber([&game_tree]() {
+      run_simulation(game_tree);
+    }).detach();  // Detach the fiber to run it asynchronously
   }
+
+  // Now we would select the best move based on visit counts at root node
 }
 
-void work_on(const GameTree& game_tree) {
-  // Send a request to the channel
-  std::cout << "Worker Sending request: " << game_tree.root.get() << std::endl;
-  future<void> response = send_request(game_tree.root.get());
-  // Wait for the response
-  response.get();
-  // Print the result
-  std::cout << "Worker sent: " << game_tree.root.get() << " and got result."
-            << std::endl;
-}
-
-future<void> send_request(Node* request) {
-  // Create a promise and future pair
-  promise<void> promise;
-  future<void> future = promise.get_future();
-
-  // Send the request to the channel
-  g_evaluation_queue.push(std::make_pair(request, std::move(promise)));
-  return future;
+void run_simulation(GameTree& game_tree) {
+  // Run MCTS simulations to select a move
+  // This is where the actual MCTS logic would go
+  // For now, we just evaluate the root node
+  std::cout << "Running simulation on root node." << std::endl;
+  evaluate(*game_tree.root);
 }
 
 // -----------------------------------------------------------
@@ -54,6 +61,20 @@ Node* Node::getChildNode(int move_idx) {
   Node* new_node_ptr = new_node.get();
   child_nodes[move_idx] = std::move(new_node);
   return new_node_ptr;
+}
+
+// -----------------------------------------------------------
+
+void evaluate(Node& node) {
+  // Create a promise and future pair
+  promise<void> promise;
+  future<void> future = promise.get_future();
+
+  // Send the node to the channel
+  g_evaluation_queue.push(std::make_pair(&node, std::move(promise)));
+
+  // Wait for evaluation to complete
+  future.get();
 }
 
 // -----------------------------------------------------------
