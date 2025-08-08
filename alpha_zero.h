@@ -2,6 +2,7 @@
 #include <absl/strings/str_join.h>
 #include <absl/time/clock.h>
 #include <absl/time/time.h>
+#include <torch/script.h>
 #include <torch/torch.h>
 
 #include <boost/fiber/all.hpp>
@@ -36,13 +37,16 @@ const int kChannelSize = 128;           // Must be a power of 2!
 const int kNumSimulations = 200;        // Number of MCTS simulations per move
 const int kBatchSize = 1000;            // Number of nodes to process at once
 const duration_t kEvalTimeout = 1ms;    // Timeout for evaluation requests
+const std::string kModelPath = "model.pt";  // Path to the model file
 
 // Constants -------------------------------------------------
 
 constexpr int kNumActions = 64 * 64;
+constexpr int kInputSize = 7 * 8 * 8;
 
-// Global Position Evaluation queue --------------------------
+// Globals ---------------------------------------------------
 
+inline torch::jit::script::Module g_model;
 inline eval_channel_t g_evaluation_queue(kChannelSize);
 
 // Game Tree functions ---------------------------------------
@@ -85,6 +89,7 @@ Node* select_child(Node& node);
 // Evaluator thread ------------------------------------------
 
 void run_evaluator();
+void init_model();
 std::vector<eval_request_t> get_requests_batch();
 void process_batch(std::vector<eval_request_t> nodes);
 

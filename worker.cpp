@@ -148,11 +148,4 @@ void evaluate(Node& node) {
 
 // -----------------------------------------------------------
 
-std::string timestamp() {
-  return absl::FormatTime("[%H:%M:%S.%E3S]", absl::Now(),
-                          absl::LocalTimeZone());
-}
-
-// -----------------------------------------------------------
-
 }  // namespace alphazero

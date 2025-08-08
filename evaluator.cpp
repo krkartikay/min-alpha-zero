@@ -6,11 +6,19 @@ namespace alphazero {
 void run_evaluator() {
   // Evaluator is supposed to get a batch of requests at once
   // and then evaluate them and send the results back.
+  std::cout << "Loading model..." << std::endl;
+  init_model();
   std::cout << "Evaluator started." << std::endl;
   while (true) {
     std::vector<eval_request_t> req_batch = get_requests_batch();
     process_batch(std::move(req_batch));
   }
+}
+
+void init_model() {
+  g_model = torch::jit::load(kModelPath);
+  g_model.eval();
+  g_model.to(torch::kCUDA);
 }
 
 std::vector<eval_request_t> get_requests_batch() {
@@ -30,10 +38,34 @@ std::vector<eval_request_t> get_requests_batch() {
 }
 
 void process_batch(std::vector<eval_request_t> nodes) {
-  std::cout << absl::StrFormat("Processing batch of %d nodes", nodes.size())
-            << std::endl;
-  absl::SleepFor(absl::Milliseconds(1));
-  for (auto& [node, p] : nodes) {
+  // std::cout << absl::StrFormat("Processing batch of %d nodes", nodes.size())
+  //           << std::endl;
+  // Copy Tensors into a single batch tensor
+  const size_t batch_size = nodes.size();
+  torch::Tensor input = torch::empty({int(batch_size), 7, 8, 8},
+                                     torch::TensorOptions().dtype(torch::kF32));
+
+  // Convert boards to tensors and copy
+  for (size_t i = 0; i < batch_size; ++i) {
+    std::array<float, kInputSize> buf = board_to_tensor(nodes[i].first->board);
+    std::memcpy(input[i].data_ptr(), buf.data(), kInputSize * sizeof(float));
+  }
+
+  // Move input to CUDA and run the model
+  auto input_cuda = input.to(torch::kCUDA);
+  auto output = g_model.forward({input_cuda});
+
+  // The model output is a tuple of (policy, value) batched tensors
+  auto output_tuple = output.toTuple();
+  auto policy_batch = output_tuple->elements()[0].toTensor().to(torch::kCPU);
+  auto value_batch = output_tuple->elements()[1].toTensor().to(torch::kCPU);
+
+  // Copy results back to nodes and signal completion
+  for (size_t i = 0; i < nodes.size(); ++i) {
+    auto& [node, p] = nodes[i];
+    node->value = value_batch[i].item<float>();
+    std::memcpy(node->policy.data(), policy_batch[i].data_ptr(),
+                kNumActions * sizeof(float));
     node->is_evaluated = true;
     p.set_value();
   }

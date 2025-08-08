@@ -24,6 +24,7 @@ set(SOURCES
   alpha_zero.h
   evaluator.cpp
   worker.cpp
+  logging.cpp
 )
 
 # Main binary
@@ -50,3 +51,8 @@ target_link_libraries(test_all
   ${Boost_LIBRARIES}
   GTest::gtest_main
 )
+
+# Copy model.pt to build directory
+configure_file(${CMAKE_SOURCE_DIR}/model.pt
+    ${CMAKE_BINARY_DIR}/model.pt
+    COPYONLY)
