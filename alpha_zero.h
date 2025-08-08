@@ -61,8 +61,7 @@ struct Node {
   Node(Node&&) = default;
   Node& operator=(Node&&) = default;
   // For debugging purposes Only
-  std::optional<chess::Move> last_move;
-  std::string history();
+  std::string move_history;
 };
 
 struct GameTree {

@@ -14,7 +14,7 @@ void run_evaluator() {
       Node* node = req.first;
       // let's wait a bit to simulate some processing time
       absl::SleepFor(absl::Milliseconds(100));
-      std::cout << absl::StrFormat("Done node %s", node->history())
+      std::cout << absl::StrFormat("Done node %s", node->move_history)
                 << std::endl;
       node->is_evaluated = true;  // Mark node as evaluated
       req.second.set_value();

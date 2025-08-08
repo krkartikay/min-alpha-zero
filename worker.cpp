@@ -107,27 +107,11 @@ Node* Node::getChildNode(int move_idx) {
   new_board.makeMove(move);
   std::unique_ptr<Node> new_node = std::make_unique<Node>(new_board);
   new_node->parent = this;
-  new_node->last_move = move;
+  new_node->move_history =
+      absl::StrCat(move_history, " ", chess::uci::moveToSan(board, move));
   Node* new_node_ptr = new_node.get();
   child_nodes[move_idx] = std::move(new_node);
   return new_node_ptr;
-}
-
-// -----------------------------------------------------------
-
-std::string Node::history() {
-  std::string history_str;
-  std::vector<std::string> moves;
-  for (const Node* current = this; current != nullptr;
-       current = current->parent) {
-    if (current->last_move.has_value()) {
-      moves.push_back(
-          chess::uci::moveToSan(current->parent->board, *current->last_move));
-    }
-  }
-  std::reverse(moves.begin(), moves.end());
-  history_str = absl::StrJoin(moves, " ");
-  return history_str;
 }
 
 // -----------------------------------------------------------
@@ -136,7 +120,7 @@ void evaluate(Node& node) {
   // Ensure no other fibers are processing this node
   std::unique_lock<mutex> lock(node.is_processing_mutex);
 
-  std::cout << "Evaluating node " << node.history() << std::endl;
+  std::cout << "Evaluating node " << node.move_history << std::endl;
 
   // Create a promise and future pair
   promise<void> promise;
