@@ -1,17 +1,45 @@
+#include <absl/flags/flag.h>
+#include <absl/flags/parse.h>
+
 #include "alpha_zero.h"
 
-int main() {
+ABSL_FLAG(int, channel_size, 128, "Channel size (must be power of 2)");
+ABSL_FLAG(int, num_simulations, 200, "Number of MCTS simulations per move");
+ABSL_FLAG(int, batch_size, 1000, "Number of nodes to process at once");
+ABSL_FLAG(int, eval_timeout_ms, 1, "Timeout for evaluation requests in milliseconds");
+ABSL_FLAG(int, num_games, 1, "Number of games to play in self-play");
+ABSL_FLAG(std::string, model_path, "model.pt", "Path to the model file");
+ABSL_FLAG(std::string, training_file, "training_data.bin", "File to store training data");
+
+using namespace alphazero;
+
+void init_globals() {
+  g_config.channel_size = absl::GetFlag(FLAGS_channel_size);
+  g_config.num_simulations = absl::GetFlag(FLAGS_num_simulations);
+  g_config.batch_size = absl::GetFlag(FLAGS_batch_size);
+  g_config.eval_timeout = duration<int, milli>(absl::GetFlag(FLAGS_eval_timeout_ms));
+  g_config.num_games = absl::GetFlag(FLAGS_num_games);
+  g_config.model_path = absl::GetFlag(FLAGS_model_path);
+  g_config.training_file = absl::GetFlag(FLAGS_training_file);
+  // initialize the evaluation queue with the channel size
+  g_evaluation_queue = std::make_unique<eval_channel_t>(g_config.channel_size);
+}
+
+int main(int argc, char* argv[]) {
+  absl::ParseCommandLine(argc, argv);
+  init_globals();
+
   // Create boost channel
   std::cout << "Starting AlphaZero..." << std::endl;
 
   // Start evaluator and worker threads on actual system threads
   std::cout << "Starting Evaluator and worker threads." << std::endl;
-  std::thread evaluator_thread(&alphazero::run_evaluator);
-  std::thread worker_thread(&alphazero::run_worker);
+  std::thread evaluator_thread(&run_evaluator);
+  std::thread worker_thread(&run_worker);
 
   worker_thread.join();
 
-  alphazero::g_stop_evaluator = true;  // Signal evaluator to stop
+  g_stop_evaluator = true;  // Signal evaluator to stop
   evaluator_thread.join();
 
   return 0;

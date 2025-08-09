@@ -35,6 +35,8 @@ set(ABSL_LIBS
   absl::time
   absl::strings
   absl::str_format
+  absl::flags
+  absl::flags_parse
 )
 
 target_link_libraries(alpha_zero

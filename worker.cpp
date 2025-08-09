@@ -4,11 +4,10 @@ namespace alphazero {
 
 std::mt19937 g_rng;  // Random number generator for MCTS
 
-const int kMaxNumGames = 1;
-
 // Worker thread main loop
 void run_worker() {
-  for (int i = 0; i < kMaxNumGames; ++i) {
+  log("Starting worker, playing %d games.", g_config.num_games);
+  for (int i = 0; i < g_config.num_games; ++i) {
     // For now just runs self play on one game
     Game game;
     self_play(game);
@@ -92,7 +91,7 @@ int select_move(Game& game) {
   // All simulations are run on a boost fiber!
   // Store fibers so we can join them later
   std::vector<boost::fibers::fiber> fibers;
-  for (int i = 0; i < kNumSimulations; ++i) {
+  for (int i = 0; i < g_config.num_simulations; ++i) {
     fibers.emplace_back([&game]() { run_simulation(game); });
   }
   // Join all fibers
@@ -228,8 +227,8 @@ static void write_bin(std::ofstream& out, const std::array<T, N>& a) {
 }
 
 void append_to_training_file(const Game& game) {
-  std::ofstream out(kTrainingFile, std::ios::binary | std::ios::app);
-  if (!out) throw std::runtime_error("open failed: " + kTrainingFile);
+  std::ofstream out(g_config.training_file, std::ios::binary | std::ios::app);
+  if (!out) throw std::runtime_error("open failed: " + g_config.training_file);
 
   for (const auto& s : game.history) {
     write_bin(out, s.board_tensor);
@@ -251,7 +250,7 @@ void evaluate(Node& node) {
   future<void> future = promise.get_future();
 
   // Send the node to the channel
-  g_evaluation_queue.push(std::make_pair(&node, std::move(promise)));
+  g_evaluation_queue->push(std::make_pair(&node, std::move(promise)));
 
   // Wait for evaluation to complete
   future.get();

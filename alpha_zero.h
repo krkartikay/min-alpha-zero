@@ -24,6 +24,8 @@ using boost::fibers::future;
 using boost::fibers::mutex;
 using boost::fibers::promise;
 using std::chrono::steady_clock;
+using std::chrono::duration;
+using std::milli;
 
 struct Node;
 
@@ -31,16 +33,6 @@ using eval_request_t = std::pair<Node*, boost::fibers::promise<void>>;
 using eval_channel_t = boost::fibers::buffered_channel<eval_request_t>;
 using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
 using duration_t = std::chrono::duration<int, std::milli>;
-
-// Config ----------------------------------------------------
-
-const int kChannelSize = 128;           // Must be a power of 2!
-const int kNumSimulations = 200;        // Number of MCTS simulations per move
-const int kBatchSize = 1000;            // Number of nodes to process at once
-const duration_t kEvalTimeout = 1ms;    // Timeout for evaluation requests
-const std::string kModelPath = "model.pt";  // Path to the model file
-const std::string kTrainingFile =
-    "training_data.bin";  // File to store training data
 
 // Constants -------------------------------------------------
 
@@ -50,8 +42,20 @@ constexpr int kInputSize = 7 * 8 * 8;
 // Globals ---------------------------------------------------
 
 inline torch::jit::script::Module g_model;
-inline eval_channel_t g_evaluation_queue(kChannelSize);
+inline std::unique_ptr<eval_channel_t> g_evaluation_queue;
 inline bool g_stop_evaluator = false;
+
+struct Config {
+  int channel_size;
+  int num_simulations;
+  int batch_size;
+  int num_games;
+  duration_t eval_timeout;
+  std::string model_path;
+  std::string training_file;
+};
+
+inline Config g_config;
 
 // Game Tree functions ---------------------------------------
 

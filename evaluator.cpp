@@ -16,7 +16,7 @@ void run_evaluator() {
 }
 
 void init_model() {
-  g_model = torch::jit::load(kModelPath);
+  g_model = torch::jit::load(g_config.model_path);
   g_model.eval();
   g_model.to(torch::kCUDA);
 }
@@ -25,9 +25,9 @@ std::vector<eval_request_t> get_requests_batch() {
   // gets a batch of requests from global queue with timeout
   std::vector<eval_request_t> req_batch;
   eval_request_t req;
-  time_point_t timeout = steady_clock::now() + kEvalTimeout;
-  while (req_batch.size() < kBatchSize) {
-    channel_op_status status = g_evaluation_queue.pop_wait_until(req, timeout);
+  time_point_t timeout = steady_clock::now() + g_config.eval_timeout;
+  while (req_batch.size() < g_config.batch_size) {
+    channel_op_status status = g_evaluation_queue->pop_wait_until(req, timeout);
     if (status == channel_op_status::success) {
       req_batch.push_back(std::move(req));
     } else if (status == channel_op_status::timeout) {
