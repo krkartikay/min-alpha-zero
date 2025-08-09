@@ -49,7 +49,15 @@ target_link_libraries(alpha_zero
   ${Boost_LIBRARIES}
 )
 
+add_executable(model_eval model_eval.cpp ${SOURCES})
+
+target_link_libraries(model_eval
+  ${TORCH_LIBRARIES}
+  ${ABSL_LIBS}
+  ${Boost_LIBRARIES}
+)
+
 # Copy model.pt to build directory
 configure_file(${CMAKE_SOURCE_DIR}/model.pt
-    ${CMAKE_BINARY_DIR}/model.pt
-    COPYONLY)
+  ${CMAKE_BINARY_DIR}/model.pt
+  COPYONLY)

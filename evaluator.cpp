@@ -26,7 +26,7 @@ std::vector<eval_request_t> get_requests_batch() {
   std::vector<eval_request_t> req_batch;
   eval_request_t req;
   time_point_t timeout = steady_clock::now() + g_config.eval_timeout;
-  while (req_batch.size() < g_config.batch_size) {
+  while (int(req_batch.size()) < g_config.batch_size) {
     channel_op_status status = g_evaluation_queue->pop_wait_until(req, timeout);
     if (status == channel_op_status::success) {
       req_batch.push_back(std::move(req));

@@ -53,6 +53,7 @@ void self_play(Game& game) {
 
 void update_root(Game& game, int action) {
   // Update root node to the selected child
+  game.root->getChildNode(action);  // to make sure the child node exists
   std::unique_ptr<Node> chosen_child =
       std::move(game.root->child_nodes[action]);
   game.root = std::move(chosen_child);
@@ -78,7 +79,7 @@ void update_game_history(Game& game) {
   int final_value = is_draw        ? 0    // Draw
                     : is_white_won ? 1    // White won, Black lost
                                    : -1;  // Black lost, White won
-  for (int i = 0; i < game.history.size(); ++i) {
+  for (size_t i = 0; i < game.history.size(); ++i) {
     game.history[i].final_value = final_value;
     final_value = -final_value;  // Reverse for the other side
   }
@@ -111,7 +112,6 @@ int select_move(Game& game) {
   std::discrete_distribution<int> dist(visit_counts.begin(),
                                        visit_counts.end());
   int action = dist(g_rng);
-  log("Selected action: %d with (%d) visits", action, visit_counts[action]);
 
   if (!game.root->legal_mask[action]) {
     log("Illegal move selected: %d", action);
