@@ -51,6 +51,7 @@ constexpr int kInputSize = 7 * 8 * 8;
 
 inline torch::jit::script::Module g_model;
 inline eval_channel_t g_evaluation_queue(kChannelSize);
+inline bool g_stop_evaluator = false;
 
 // Game Tree functions ---------------------------------------
 

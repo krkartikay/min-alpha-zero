@@ -4,14 +4,15 @@ namespace alphazero {
 
 std::mt19937 g_rng;  // Random number generator for MCTS
 
+const int kMaxNumGames = 1;
+
 // Worker thread main loop
 void run_worker() {
-  int game_number = 0;
-  while (true) {
+  for (int i = 0; i < kMaxNumGames; ++i) {
     // For now just runs self play on one game
     Game game;
     self_play(game);
-    log("Game %d finished.", game_number++);
+    log("Game %d finished.", i);
   }
 }
 

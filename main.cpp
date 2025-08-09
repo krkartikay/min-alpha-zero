@@ -9,8 +9,10 @@ int main() {
   std::thread evaluator_thread(&alphazero::run_evaluator);
   std::thread worker_thread(&alphazero::run_worker);
 
-  evaluator_thread.join();
   worker_thread.join();
+
+  alphazero::g_stop_evaluator = true;  // Signal evaluator to stop
+  evaluator_thread.join();
 
   return 0;
 }

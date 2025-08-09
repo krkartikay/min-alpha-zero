@@ -9,7 +9,7 @@ void run_evaluator() {
   std::cout << "Loading model..." << std::endl;
   init_model();
   std::cout << "Evaluator started." << std::endl;
-  while (true) {
+  while (!g_stop_evaluator) {
     std::vector<eval_request_t> req_batch = get_requests_batch();
     process_batch(std::move(req_batch));
   }
