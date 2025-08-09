@@ -139,7 +139,7 @@ void run_simulation(Game& game) {
   while (parent_node != nullptr) {
     parent_node->child_visits[current_node->parent_action] += 1;
     parent_node->child_values[current_node->parent_action] +=
-        current_node->value;
+        -1 * current_node->value;  // SIGN FLIP! -> Opponent's perspective
     current_node = parent_node;
     parent_node = parent_node->parent;
   }
