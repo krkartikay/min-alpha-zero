@@ -127,6 +127,8 @@ void evaluate(Node& node);
 
 // Logging and Debugging ---------------------------------
 
+std::string board_to_string(const chess::Board& board);
+
 #define log(fmt, ...) \
   std::cout << absl::StrFormat("%s " fmt "\n", timestamp(), ##__VA_ARGS__)
 

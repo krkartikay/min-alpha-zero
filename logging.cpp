@@ -9,6 +9,12 @@ std::string timestamp() {
                           absl::LocalTimeZone());
 }
 
+std::string board_to_string(const chess::Board& board) {
+  std::ostringstream oss;
+  oss << board;
+  return oss.str();
+}
+
 // -----------------------------------------------------------
 
 }  // namespace alphazero

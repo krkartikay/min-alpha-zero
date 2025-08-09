@@ -41,21 +41,23 @@ inline int move_to_int(const chess::Move& move) {
 inline chess::Move int_to_move(int move_int, const chess::Board& board) {
   int from = move_int / 64;
   int to = move_int % 64;
-  if ((from / 8 == 6 && to / 8 == 7) || (from / 8 == 1 && to / 8 == 0)) {
-    auto piece = board.at(chess::Square(from));
-    if (piece.type() == chess::PieceType::PAWN) {
-      return chess::Move::make(
-          chess::Square(from), chess::Square(to),
-          chess::PieceType::QUEEN);  // Default promotion to queen
-    }
+  auto piece = board.at(chess::Square(from));
+  // Detect pawn promotion moves: Pawn moving to the last rank
+  if (((from / 8 == 6 && to / 8 == 7) ||
+      (from / 8 == 1 && to / 8 == 0) )&&
+          (piece.type() == chess::PieceType::PAWN)) {
+    return chess::Move::make<chess::Move::PROMOTION>(
+        chess::Square(from), chess::Square(to),
+        chess::PieceType::QUEEN);  // Default promotion to queen
+  }
+  // Detect castling: king moving to rook squares
+  if (piece.type() == chess::PieceType::KING &&
+      ((from == 4 && (to == 0 || to == 7)) ||     // White castling
+       (from == 60 && (to == 56 || to == 63)))) { // Black castling
+    return chess::Move::make<chess::Move::CASTLING>(chess::Square(from),
+                                                    chess::Square(to));
   }
   return chess::Move::make(chess::Square(from), chess::Square(to));
-}
-
-inline std::string board_to_string(const chess::Board& board) {
-  std::ostringstream oss;
-  oss << board;
-  return oss.str();
 }
 
 }  // namespace chess
