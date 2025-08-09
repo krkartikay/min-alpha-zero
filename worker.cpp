@@ -29,9 +29,9 @@ void self_play(Game& game) {
     int action = select_move(game);
 
     // For logging:
-    chess::Move move = int_to_move(action, game.root->board);
-    std::string move_str = chess::uci::moveToSan(game.root->board, move);
-    log("Move played: %s", move_str);
+    // chess::Move move = int_to_move(action, game.root->board);
+    // std::string move_str = chess::uci::moveToSan(game.root->board, move);
+    // log("Move played: %s", move_str);
 
     update_root(game, action);
 
@@ -41,7 +41,7 @@ void self_play(Game& game) {
     moves_played++;
     is_game_over = game.root->is_leaf;
 
-    log("Current board state:\n%s", board_to_string(game.root->board));
+    // log("Current board state:\n%s", board_to_string(game.root->board));
   }
 
   // At the end of the game note final winner and write to training file.

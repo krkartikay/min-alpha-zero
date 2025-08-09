@@ -92,7 +92,7 @@ GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other,
     log("Game start: White=%s, Black=%s", white->name(), black->name());
   }
 
-  while (!game.root->is_leaf && moves_played < 200) {
+  while (!game.root->is_leaf && moves_played < 100) {
     ChessAgent* current = (moves_played % 2 == 0) ? white : black;
 
     // Get action from current agent
@@ -145,9 +145,6 @@ GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other,
 }
 
 void run_agent_tournament() {
-  RandomAgent random_agent;
-  MCTSAgent mcts_agent;
-
   int total_moves = 0;
   int total_agent_wins = 0;
   int total_draws = 0;
@@ -159,20 +156,33 @@ void run_agent_tournament() {
   log("Starting tournament: MCTS(%d sims) vs Random (%d games)",
       g_config.num_simulations, num_games);
 
+  std::vector<GameResult> results(num_games);
+
+  // Run games concurrently using fibers
+  std::vector<boost::fibers::fiber> fibers;
   for (int i = 0; i < num_games; ++i) {
-    GameResult result = play_agent_vs_agent(mcts_agent, random_agent, verbose);
-
-    total_moves += result.moves_played;
-    total_agent_wins += result.agent_wins;
-    total_draws += result.draws;
-    total_other_wins += result.other_wins;
-
-    if (!verbose) {
+    fibers.emplace_back([&, i]() {
+      RandomAgent random_agent;
+      MCTSAgent mcts_agent;
+      GameResult result =
+          play_agent_vs_agent(mcts_agent, random_agent, verbose);
+      results[i] = result;
       log("Game %d: %s", i + 1,
           result.agent_wins ? "MCTS wins"
           : result.draws    ? "Draw"
                             : "Random wins");
-    }
+    });
+  }
+
+  for (auto& f : fibers) {
+    f.join();
+  }
+
+  for (const auto& result : results) {
+    total_moves += result.moves_played;
+    total_agent_wins += result.agent_wins;
+    total_draws += result.draws;
+    total_other_wins += result.other_wins;
   }
 
   log("Tournament results:");
