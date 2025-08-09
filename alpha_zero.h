@@ -2,12 +2,14 @@
 #include <absl/strings/str_join.h>
 #include <absl/time/clock.h>
 #include <absl/time/time.h>
+#include <absl/log/check.h>
 #include <torch/script.h>
 #include <torch/torch.h>
 
 #include <boost/fiber/all.hpp>
 #include <chess.hpp>
 #include <chess_utils.hpp>
+#include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <span>
@@ -64,10 +66,14 @@ struct Node {
   Node* parent = nullptr;
   bool is_evaluated = false;
   bool is_leaf = false;
-  int visit_count = 0;
+  int parent_action = -1;
   float value = 0.0f;
   std::array<bool, kNumActions> legal_mask = {};
   std::array<float, kNumActions> policy = {};
+  // sum of values of child nodes and visit counts of child nodes
+  std::array<int, kNumActions> child_visits = {};
+  std::array<float, kNumActions> child_values = {};
+  // Mutex to ensure only one fiber processes this node at a time
   mutex is_processing_mutex;
   // Child node map, move idx -> Node*, Lazily initialized
   std::map<int, std::unique_ptr<Node>> child_nodes;
@@ -110,7 +116,7 @@ void save_game_state(Game& game);
 void update_game_history(Game& game);
 int select_move(Game& game);
 void run_simulation(Game& game);
-Node* select_child(Node& node);
+int select_action(Node& node);
 void append_to_training_file(const Game& game);
 
 // Evaluator thread ------------------------------------------

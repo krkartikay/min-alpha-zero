@@ -4,6 +4,8 @@ namespace alphazero {
 
 std::mt19937 g_rng;  // Random number generator for MCTS
 
+constexpr float c_puct = 1.0;
+
 // Worker thread main loop
 void run_worker() {
   log("Starting worker, playing %d games.", g_config.num_games);
@@ -65,10 +67,7 @@ void save_game_state(Game& game) {
   game.history.back().board_tensor = chess::board_to_tensor(game.root->board);
   game.history.back().policy = game.root->policy;
   game.history.back().value = game.root->value;
-  game.history.back().child_visit_counts = {};
-  for (const auto& [move_idx, child_node] : game.root->child_nodes) {
-    game.history.back().child_visit_counts[move_idx] = child_node->visit_count;
-  }
+  game.history.back().child_visit_counts = game.root->child_visits;
 }
 
 void update_game_history(Game& game) {
@@ -100,24 +99,12 @@ int select_move(Game& game) {
     fiber.join();
   }
 
-  // Calculate visit counts at root
-  std::array<int, kNumActions> visit_counts = {};
-  for (int i = 0; i < kNumActions; ++i) {
-    Node* child = game.root->getChildNode(i);
-    if (child == nullptr) continue;  // illegal move
-    visit_counts[i] = child->visit_count;
-  }
-
   // Sample an action based on visit counts
-  std::discrete_distribution<int> dist(visit_counts.begin(),
-                                       visit_counts.end());
+  std::discrete_distribution<int> dist(game.root->child_visits.begin(),
+                                       game.root->child_visits.end());
   int action = dist(g_rng);
 
-  if (!game.root->legal_mask[action]) {
-    log("Illegal move selected: %d", action);
-    std::abort();
-  }
-
+  CHECK(game.root->legal_mask[action]) << "Illegal move selected: " << action;
   return action;
 }
 
@@ -132,7 +119,12 @@ void run_simulation(Game& game) {
     std::unique_lock<mutex> lock(current_node->is_processing_mutex);
     if (!current_node->is_evaluated) break;
     if (current_node->is_leaf) break;
-    current_node = select_child(*current_node);
+    int selected_action = select_action(*current_node);
+    CHECK(selected_action != -1 && current_node->legal_mask[selected_action])
+        << "Illegal action selected: " << selected_action
+        << " at node: " << current_node->move_history << " with board:\n"
+        << board_to_string(current_node->board);
+    current_node = current_node->getChildNode(selected_action);
   }
 
   // evaluate node
@@ -141,27 +133,45 @@ void run_simulation(Game& game) {
   if (!current_node->is_evaluated) {
     evaluate(*current_node);
   }
-  current_node->visit_count++;
 
   // backpropagate the result
-  while (current_node->parent != nullptr) {
-    current_node = current_node->parent;
-    current_node->visit_count++;
+  Node* parent_node = current_node->parent;
+  while (parent_node != nullptr) {
+    parent_node->child_visits[current_node->parent_action] += 1;
+    parent_node->child_values[current_node->parent_action] +=
+        current_node->value;
+    current_node = parent_node;
+    parent_node = parent_node->parent;
   }
 }
 
-Node* select_child(Node& node) {
-  // Gather legal actions
-  std::vector<int> legal_moves;
-  legal_moves.reserve(kNumActions);
-  for (int a = 0; a < kNumActions; ++a)
-    if (node.legal_mask[a]) legal_moves.push_back(a);
-  if (legal_moves.empty()) return nullptr;  // no children
-  std::uniform_int_distribution<int> dist(
-      0, static_cast<int>(legal_moves.size()) - 1);
-  int idx = dist(g_rng);
-  int move = legal_moves[idx];
-  return node.getChildNode(move);
+int select_action(Node& node) {
+  if (node.is_leaf) {
+    return -1;
+  }
+  // current node visit count = sum of child visit counts + 1
+  float node_visits =
+      std::accumulate(node.child_visits.begin(), node.child_visits.end(), 0) +
+      1;
+
+  // for all moves we will calculate a score
+  std::array<float, kNumActions> score = {};
+  for (int i = 0; i < kNumActions; i++) {
+    // Q -> avg evaluation
+    float child_value = (node.child_visits[i] == 0)
+                            ? 0
+                            : node.child_values[i] / node.child_visits[i];
+    // P -> prior probability
+    float prior_probability = node.policy[i];
+    // Exploration term
+    float exploration_value =
+        std::sqrt(node_visits) / (node.child_visits[i] + 1);
+    score[i] = child_value + c_puct * prior_probability * exploration_value;
+    score[i] *= node.legal_mask[i];
+  }
+  std::discrete_distribution<int> dist(score.begin(), score.end());
+  int action = dist(g_rng);
+  return action;
 }
 
 // -----------------------------------------------------------
@@ -202,6 +212,7 @@ Node* Node::getChildNode(int move_idx) {
   new_board.makeMove(move);
   std::unique_ptr<Node> new_node = std::make_unique<Node>(new_board);
   new_node->parent = this;
+  new_node->parent_action = move_idx;
   new_node->move_history =
       move_history.empty()
           ? chess::uci::moveToSan(board, move)
