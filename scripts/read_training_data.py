@@ -17,8 +17,15 @@ print(f"Policy shape: {records['policy'].shape}.")
 print(f"Visits shape: {records['child_visit_counts'].shape}.")
 print(f"Values shape: {records['value'].shape}.")
 print(f"Finals shape: {records['final_value'].shape}.")
-print(f"First board: {records['board_tensor'][0].reshape(7, 8, 8)}")
-print(f"First policy: {records['policy'][0]}")
-print(f"First visits: {records['child_visit_counts'][0]}")
-print(f"First value: {records['value'][0]}")
-print(f"First final value: {records['final_value'][0]}")
+
+# Print out the records one by one
+for i, record in enumerate(records):
+    print(f"Record {i}:")
+    print(f"  Board Tensor:\n{record['board_tensor'].reshape(7, 8, 8)}")
+    print(f"  Policy:\n{record['policy']}")
+    print(f"  Child Visit Counts:\n{record['child_visit_counts']}")
+    print(f"  Value:\n{record['value']}")
+    print(f"  Final Value:\n{record['final_value']}")
+    print()  # Add a newline for better readability
+    if i >= 5:  # Limit output to first 5 records for brevity
+        break

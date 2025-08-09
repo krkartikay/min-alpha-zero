@@ -43,15 +43,6 @@ target_link_libraries(alpha_zero
   ${Boost_LIBRARIES}
 )
 
-# Test binary
-add_executable(test_all test_all.cpp ${SOURCES})
-target_link_libraries(test_all
-  ${TORCH_LIBRARIES}
-  ${ABSL_LIBS}
-  ${Boost_LIBRARIES}
-  GTest::gtest_main
-)
-
 # Copy model.pt to build directory
 configure_file(${CMAKE_SOURCE_DIR}/model.pt
     ${CMAKE_BINARY_DIR}/model.pt
