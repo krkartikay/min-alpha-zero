@@ -77,7 +77,8 @@ void save_game_state(Game& game) {
 void update_game_history(Game& game) {
   auto result = game.root->board.isGameOver();
   chess::Color side_to_move = game.root->board.sideToMove();
-  bool is_draw = result.second == chess::GameResult::DRAW;
+  bool is_draw = result.second == chess::GameResult::DRAW ||
+                 result.second == chess::GameResult::NONE;
   bool is_white_won = side_to_move == chess::Color::BLACK;
   int final_value = is_draw        ? 0    // Draw
                     : is_white_won ? 1    // White won, Black lost
