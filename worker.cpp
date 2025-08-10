@@ -10,11 +10,18 @@ constexpr float c_puct = 1.0;
 void run_worker() {
   LOG(INFO) << absl::StrFormat("Starting worker, playing %d games.",
                                g_config.num_games);
+  // Run each game in a separate boost fiber
+  std::vector<boost::fibers::fiber> fibers;
   for (int i = 0; i < g_config.num_games; ++i) {
-    // For now just runs self play on one game
-    Game game;
-    self_play(game);
-    LOG(INFO) << absl::StrFormat("Game %d finished.", i);
+    fibers.emplace_back([i]() {
+      Game game;
+      self_play(game);
+      LOG(INFO) << absl::StrFormat("Game %d finished.", i);
+    });
+  }
+  // Join all fibers
+  for (auto& fiber : fibers) {
+    fiber.join();
   }
 }
 
