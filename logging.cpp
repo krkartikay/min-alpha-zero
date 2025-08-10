@@ -9,7 +9,7 @@ namespace alphazero {
 constexpr const char* kSeparatorLine =
     "========================================================\n";
 constexpr const char* kChildSeparatorLine =
-    "-------------------------------------------------------\n";
+    "--------------------------------------------------------\n";
 
 template <typename T>
 std::string dump_sparse_array(const Node& node,
@@ -25,6 +25,12 @@ std::string dump_sparse_array(const Node& node,
   }
   out += "]";
   return out;
+}
+
+std::string board_to_string(const chess::Board& board) {
+  std::ostringstream oss;
+  oss << board;
+  return oss.str();
 }
 
 std::string dump_node(const Node& node, int chosen_action, int depth) {
@@ -50,10 +56,18 @@ std::string dump_node(const Node& node, int chosen_action, int depth) {
                         chess::uci::moveToSan(node.board, move));
   }
 
+  // Split board string into lines and add indent before each line
+  std::string board_str = board_to_string(node.board);
+  std::istringstream iss(board_str);
+  std::string board_out, line;
+  while (std::getline(iss, line)) {
+    board_out += indent + line + "\n";
+  }
+
   return absl::StrFormat(
       "%s%s"
       "%sNode (%p): %s\n"
-      "%sBoard:\n%s\n"
+      "%sBoard:\n%s"
       "%sParent node (%p): %s\n"
       "%sIs Evaluated? %s\n"
       "%sIs Leaf? %s\n"
@@ -70,7 +84,7 @@ std::string dump_node(const Node& node, int chosen_action, int depth) {
       "%s"
       "%s%s",
       indent, kSeparatorLine, indent, static_cast<const void*>(&node),
-      node.move_history, indent, board_to_string(node.board), indent,
+      node.move_history, indent, board_out, indent,
       static_cast<const void*>(node.parent),
       node.parent ? node.parent->move_history : "None", indent,
       node.is_evaluated ? "Yes" : "No", indent, node.is_leaf ? "Yes" : "No",
@@ -101,13 +115,5 @@ std::string timestamp() {
   return absl::FormatTime("[%H:%M:%S.%E3S]", absl::Now(),
                           absl::LocalTimeZone());
 }
-
-std::string board_to_string(const chess::Board& board) {
-  std::ostringstream oss;
-  oss << board;
-  return oss.str();
-}
-
-// -----------------------------------------------------------
 
 }  // namespace alphazero
