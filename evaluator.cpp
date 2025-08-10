@@ -1,4 +1,9 @@
+#include <torch/script.h>
+#include <torch/torch.h>
+
 #include "alpha_zero.h"
+
+inline torch::jit::script::Module g_model;
 
 namespace alphazero {
 

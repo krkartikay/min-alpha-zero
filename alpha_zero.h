@@ -1,19 +1,16 @@
 #include <absl/log/check.h>
 #include <absl/log/log.h>
-#include <absl/log/initialize.h>
-#include <absl/log/globals.h>
 #include <absl/strings/str_format.h>
 #include <absl/strings/str_join.h>
 #include <absl/time/clock.h>
 #include <absl/time/time.h>
-#include <torch/script.h>
-#include <torch/torch.h>
 
 #include <algorithm>
 #include <boost/fiber/all.hpp>
 #include <chess.hpp>
 #include <chess_utils.hpp>
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <span>
 
@@ -46,7 +43,6 @@ constexpr int kInputSize = 7 * 8 * 8;
 
 // Globals ---------------------------------------------------
 
-inline torch::jit::script::Module g_model;
 inline std::unique_ptr<eval_channel_t> g_evaluation_queue;
 inline bool g_stop_evaluator = false;
 

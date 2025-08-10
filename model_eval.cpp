@@ -1,10 +1,8 @@
 #include <absl/flags/flag.h>
 #include <absl/flags/parse.h>
-
-#include <chess.hpp>
-#include <iostream>
-#include <memory>
-#include <random>
+#include <absl/log/globals.h>
+#include <absl/log/initialize.h>
+#include <absl/log/log.h>
 
 #include "alpha_zero.h"
 

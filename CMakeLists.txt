@@ -31,9 +31,6 @@ set(SOURCES
   logging.cpp
 )
 
-# Main binary
-add_executable(alpha_zero main.cpp ${SOURCES})
-
 # absl libraries variable
 set(ABSL_LIBS
   absl::time
@@ -42,21 +39,25 @@ set(ABSL_LIBS
   absl::flags
   absl::flags_parse
   absl::log
+  "$<LINK_LIBRARY:WHOLE_ARCHIVE,absl::log_flags>"
   absl::log_initialize
   absl::log_globals
 )
 
+# Main binary
+add_executable(alpha_zero main.cpp ${SOURCES})
+
 target_link_libraries(alpha_zero
-  ${TORCH_LIBRARIES}
   ${ABSL_LIBS}
+  ${TORCH_LIBRARIES}
   ${Boost_LIBRARIES}
 )
 
 add_executable(model_eval model_eval.cpp ${SOURCES})
 
 target_link_libraries(model_eval
-  ${TORCH_LIBRARIES}
   ${ABSL_LIBS}
+  ${TORCH_LIBRARIES}
   ${Boost_LIBRARIES}
 )
 
