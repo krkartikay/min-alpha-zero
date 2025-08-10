@@ -76,6 +76,7 @@ void update_root(Game& game, int action) {
 void save_game_state(Game& game) {
   game.history.emplace_back();
   game.history.back().board_tensor = chess::board_to_tensor(game.root->board);
+  game.history.back().legal_mask = game.root->legal_mask;
   game.history.back().policy = game.root->policy;
   game.history.back().value = game.root->value;
   game.history.back().child_visit_counts = game.root->child_visits;
@@ -257,6 +258,7 @@ void append_to_training_file(const Game& game) {
 
   for (const auto& s : game.history) {
     write_bin(out, s.board_tensor);
+    write_bin(out, s.legal_mask);
     write_bin(out, s.policy);
     write_bin(out, s.child_visit_counts);
     write_bin(out, s.value);

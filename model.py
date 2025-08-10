@@ -59,8 +59,7 @@ class ChessModel(nn.Module):
         value = self.value_head(x)
         return policy, value
 
-def export_model():
-    model = ChessModel()
+def export_model(model):
     model.eval()
     
     # Create dummy input
@@ -72,4 +71,5 @@ def export_model():
     print("Model exported to model.pt")
 
 if __name__ == "__main__":
-    export_model()
+    model = ChessModel()
+    export_model(model)

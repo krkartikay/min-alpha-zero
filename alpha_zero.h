@@ -97,12 +97,14 @@ struct Node {
 struct GameState {
   // Board tensor at current state
   std::array<float, kInputSize> board_tensor = {};
+  // Legal mask, we need this during training too
+  std::array<bool, kNumActions> legal_mask = {};
   // Policy vector at current state (as predicted by the model)
   std::array<float, kNumActions> policy = {};
-  // Value of current move (as predicted by the model)
-  float value = 0.0f;
   // Child visit counts (in policy order)
   std::array<int, kNumActions> child_visit_counts = {};
+  // Value of current move (as predicted by the model)
+  float value = 0.0f;
   // Final value (will be set at the end of the game)
   int final_value = 0;
 };
