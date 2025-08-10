@@ -75,7 +75,8 @@ struct GameResult {
   int other_wins;
 };
 
-GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other) {
+GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other,
+                               int game_num) {
   Game game;  // Start with fresh game
   std::mt19937 rng(std::random_device{}());
   std::uniform_int_distribution<int> coin(0, 1);
@@ -98,7 +99,7 @@ GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other) {
 
     // Let's store game tree state after the move
     if (g_config.debug) {
-      dump_game_tree_to_file(game);
+      dump_game_tree_to_file(game, game_num, moves_played, action);
     }
 
     VLOG(1) << absl::StrFormat("Agent %s selected action: %d", current->name(),
@@ -160,7 +161,7 @@ void run_agent_tournament() {
   for (int i = 0; i < num_games; ++i) {
     RandomAgent random_agent;
     MCTSAgent mcts_agent;
-    GameResult result = play_agent_vs_agent(mcts_agent, random_agent);
+    GameResult result = play_agent_vs_agent(mcts_agent, random_agent, i);
     results[i] = result;
     LOG(INFO) << absl::StrFormat("Game %d: %s", i + 1,
                                  result.agent_wins ? "MCTS wins"

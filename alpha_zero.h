@@ -123,8 +123,8 @@ void run_simulation(Game& game);
 int select_action(Node& node);
 void append_to_training_file(const Game& game);
 // To dump intermediate states to a file for debugging
-void dump_node(const Node& node, std::ostream& os, int depth = 0);
-void dump_game_tree_to_file(const Game& game, int g = 0, int m = 0);
+void dump_game_tree_to_file(const Game& game, int g = 0, int m = 0,
+                            int chosen_action = -1);
 
 // Evaluator thread ------------------------------------------
 

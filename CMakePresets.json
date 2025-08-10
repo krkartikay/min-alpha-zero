@@ -13,12 +13,29 @@
         "CMAKE_INSTALL_RPATH": "/home/krkartikay/.pyenv/versions/code/lib/python3.11/site-packages/torch/lib",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug (Torch from Python)",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_PREFIX_PATH": "/home/krkartikay/.pyenv/versions/code/lib/python3.11/site-packages/torch/share/cmake/Torch",
+        "CMAKE_BUILD_RPATH": "/home/krkartikay/.pyenv/versions/code/lib/python3.11/site-packages/torch/lib",
+        "CMAKE_INSTALL_RPATH": "/home/krkartikay/.pyenv/versions/code/lib/python3.11/site-packages/torch/lib",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
     }
   ],
   "buildPresets": [
     {
       "name": "default",
       "configurePreset": "build"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug"
     }
   ]
 }
