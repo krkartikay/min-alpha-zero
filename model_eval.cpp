@@ -9,7 +9,6 @@
 #include "alpha_zero.h"
 
 // new flag specific to this binary
-ABSL_FLAG(bool, verbose_games, false, "Print detailed game output");
 
 // existing flags from main.cpp
 ABSL_FLAG(int, channel_size, 128, "Channel size (must be power of 2)");
@@ -76,8 +75,7 @@ struct GameResult {
   int other_wins;
 };
 
-GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other,
-                               bool verbose) {
+GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other) {
   Game game;  // Start with fresh game
   std::mt19937 rng(std::random_device{}());
   std::uniform_int_distribution<int> coin(0, 1);
@@ -88,9 +86,8 @@ GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other,
 
   int moves_played = 0;
 
-  if (verbose) {
-    log("Game start: White=%s, Black=%s", white->name(), black->name());
-  }
+  LOG(INFO) << absl::StrFormat("Game start: White=%s, Black=%s", white->name(),
+                               black->name());
 
   while (!game.root->is_leaf && moves_played < 100) {
     ChessAgent* current = (moves_played % 2 == 0) ? white : black;
@@ -98,9 +95,8 @@ GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other,
     // Get action from current agent
     int action = current->select_action(game);
     if (action == -1) break;  // No legal moves
-    if (verbose) {
-      log("Agent %s selected action: %d", current->name(), action);
-    }
+    VLOG(1) << absl::StrFormat("Agent %s selected action: %d", current->name(),
+                               action);
 
     // For move logging
     chess::Move move = int_to_move(action, game.root->board);
@@ -109,11 +105,9 @@ GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other,
     // Make the move using existing infrastructure
     update_root(game, action);
 
-    if (verbose) {
-      std::string tab = (moves_played % 2 == 0) ? " " : "\t...";
-      log("%3d.%s%s", moves_played / 2 + 1, tab, move_str);
-      log("Board:\n%s", board_to_string(game.root->board));
-    }
+    std::string tab = (moves_played % 2 == 0) ? " " : "\t...";
+    VLOG(1) << absl::StrFormat("%3d.%s%s", moves_played / 2 + 1, tab, move_str);
+    VLOG(2) << absl::StrFormat("Board:\n%s", board_to_string(game.root->board));
 
     moves_played++;
   }
@@ -123,15 +117,14 @@ GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other,
   bool is_game_over = (result.first != chess::GameResultReason::NONE);
   chess::GameResult game_result = result.second;
 
-  if (verbose) {
-    log("Game finished. Moves: %d, Result: %s", moves_played,
-        !is_game_over ? "Incomplete"
-        : game_result == chess::GameResult::DRAW
-            ? "Draw"
-            : (game.root->board.sideToMove() == chess::Color::BLACK
-                   ? "White wins"
-                   : "Black wins"));
-  }
+  LOG(INFO) << absl::StrFormat(
+      "Game finished. Moves: %d, Result: %s", moves_played,
+      !is_game_over ? "Incomplete"
+      : game_result == chess::GameResult::DRAW
+          ? "Draw"
+          : (game.root->board.sideToMove() == chess::Color::BLACK
+                 ? "White wins"
+                 : "Black wins"));
 
   if (!is_game_over || game_result == chess::GameResult::DRAW) {
     return {moves_played, 0, 1, 0};
@@ -150,10 +143,10 @@ void run_agent_tournament() {
   int total_draws = 0;
   int total_other_wins = 0;
 
-  bool verbose = absl::GetFlag(FLAGS_verbose_games);
   int num_games = g_config.num_games;
 
-  log("Starting tournament: MCTS(%d sims) vs Random (%d games)",
+  LOG(INFO) << absl::StrFormat(
+      "Starting tournament: MCTS(%d sims) vs Random (%d games)",
       g_config.num_simulations, num_games);
 
   std::vector<GameResult> results(num_games);
@@ -162,12 +155,12 @@ void run_agent_tournament() {
   for (int i = 0; i < num_games; ++i) {
     RandomAgent random_agent;
     MCTSAgent mcts_agent;
-    GameResult result = play_agent_vs_agent(mcts_agent, random_agent, verbose);
+    GameResult result = play_agent_vs_agent(mcts_agent, random_agent);
     results[i] = result;
-    log("Game %d: %s", i + 1,
-        result.agent_wins ? "MCTS wins"
-        : result.draws    ? "Draw"
-                          : "Random wins");
+    LOG(INFO) << absl::StrFormat("Game %d: %s", i + 1,
+                                 result.agent_wins ? "MCTS wins"
+                                 : result.draws    ? "Draw"
+                                                   : "Random wins");
   }
 
   for (const auto& result : results) {
@@ -177,14 +170,16 @@ void run_agent_tournament() {
     total_other_wins += result.other_wins;
   }
 
-  log("Tournament results:");
-  log("  Games played: %d", num_games);
-  log("  MCTS wins: %d (%.1f%%)", total_agent_wins,
-      100.0f * total_agent_wins / num_games);
-  log("  Draws: %d (%.1f%%)", total_draws, 100.0f * total_draws / num_games);
-  log("  Random wins: %d (%.1f%%)", total_other_wins,
-      100.0f * total_other_wins / num_games);
-  log("  Average moves per game: %.1f", float(total_moves) / num_games);
+  LOG(INFO) << "Tournament results:";
+  LOG(INFO) << absl::StrFormat("  Games played: %d", num_games);
+  LOG(INFO) << absl::StrFormat("  MCTS wins: %d (%.1f%%)", total_agent_wins,
+                               100.0f * total_agent_wins / num_games);
+  LOG(INFO) << absl::StrFormat("  Draws: %d (%.1f%%)", total_draws,
+                               100.0f * total_draws / num_games);
+  LOG(INFO) << absl::StrFormat("  Random wins: %d (%.1f%%)", total_other_wins,
+                               100.0f * total_other_wins / num_games);
+  LOG(INFO) << absl::StrFormat("  Average moves per game: %.1f",
+                               float(total_moves) / num_games);
 }
 
 void init_globals() {
@@ -204,10 +199,11 @@ void init_globals() {
 
 int main(int argc, char* argv[]) {
   absl::ParseCommandLine(argc, argv);
+  absl::InitializeLog();
 
   alphazero::init_globals();
 
-  std::cout << "Starting AlphaZero agent tournament..." << std::endl;
+  LOG(INFO) << "Starting AlphaZero agent tournament...";
 
   // Start evaluator thread
   std::thread evaluator_thread(&alphazero::run_evaluator);

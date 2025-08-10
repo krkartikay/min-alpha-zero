@@ -6,9 +6,9 @@ namespace alphazero {
 void run_evaluator() {
   // Evaluator is supposed to get a batch of requests at once
   // and then evaluate them and send the results back.
-  std::cout << "Loading model..." << std::endl;
+  LOG(INFO) << "Loading model...";
   init_model();
-  std::cout << "Evaluator started." << std::endl;
+  LOG(INFO) << "Evaluator started.";
   while (!g_stop_evaluator) {
     std::vector<eval_request_t> req_batch = get_requests_batch();
     process_batch(std::move(req_batch));

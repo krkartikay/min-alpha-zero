@@ -1,15 +1,18 @@
+#include <absl/log/check.h>
+#include <absl/log/log.h>
+#include <absl/log/initialize.h>
+#include <absl/log/globals.h>
 #include <absl/strings/str_format.h>
 #include <absl/strings/str_join.h>
 #include <absl/time/clock.h>
 #include <absl/time/time.h>
-#include <absl/log/check.h>
 #include <torch/script.h>
 #include <torch/torch.h>
 
+#include <algorithm>
 #include <boost/fiber/all.hpp>
 #include <chess.hpp>
 #include <chess_utils.hpp>
-#include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <span>
@@ -25,9 +28,9 @@ using boost::fibers::channel_op_status;
 using boost::fibers::future;
 using boost::fibers::mutex;
 using boost::fibers::promise;
-using std::chrono::steady_clock;
-using std::chrono::duration;
 using std::milli;
+using std::chrono::duration;
+using std::chrono::steady_clock;
 
 struct Node;
 
@@ -138,9 +141,6 @@ void evaluate(Node& node);
 // Logging and Debugging ---------------------------------
 
 std::string board_to_string(const chess::Board& board);
-
-#define log(fmt, ...) \
-  std::cout << absl::StrFormat("%s " fmt "\n", timestamp(), ##__VA_ARGS__)
 
 // add time with absl str format in the format [HH:MM:SS.sss]
 std::string timestamp();

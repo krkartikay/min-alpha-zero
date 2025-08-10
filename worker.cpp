@@ -8,12 +8,13 @@ constexpr float c_puct = 1.0;
 
 // Worker thread main loop
 void run_worker() {
-  log("Starting worker, playing %d games.", g_config.num_games);
+  LOG(INFO) << absl::StrFormat("Starting worker, playing %d games.",
+                               g_config.num_games);
   for (int i = 0; i < g_config.num_games; ++i) {
     // For now just runs self play on one game
     Game game;
     self_play(game);
-    log("Game %d finished.", i);
+    LOG(INFO) << absl::StrFormat("Game %d finished.", i);
   }
 }
 
@@ -31,9 +32,10 @@ void self_play(Game& game) {
     int action = select_move(game);
 
     // For logging:
-    // chess::Move move = int_to_move(action, game.root->board);
-    // std::string move_str = chess::uci::moveToSan(game.root->board, move);
-    // log("Move played: %s", move_str);
+    VLOG(1) << absl::StrFormat(
+        "Move played: %s",
+        chess::uci::moveToSan(game.root->board,
+                              int_to_move(action, game.root->board)));
 
     update_root(game, action);
 
@@ -43,13 +45,15 @@ void self_play(Game& game) {
     moves_played++;
     is_game_over = game.root->is_leaf;
 
-    // log("Current board state:\n%s", board_to_string(game.root->board));
+    VLOG(2) << absl::StrFormat("Current board state:\n%s",
+                               board_to_string(game.root->board));
   }
 
   // At the end of the game note final winner and write to training file.
   update_game_history(game);
   append_to_training_file(game);
-  log("Game finished. Moves played: %d, Final value: %d", moves_played,
+  LOG(INFO) << absl::StrFormat(
+      "Game finished. Moves played: %d, Final value: %d", moves_played,
       game.history[0].final_value);
 }
 

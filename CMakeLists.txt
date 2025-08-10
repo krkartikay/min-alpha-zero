@@ -41,6 +41,9 @@ set(ABSL_LIBS
   absl::str_format
   absl::flags
   absl::flags_parse
+  absl::log
+  absl::log_initialize
+  absl::log_globals
 )
 
 target_link_libraries(alpha_zero
