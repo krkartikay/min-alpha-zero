@@ -1,5 +1,8 @@
 # gitignore for Python + ML + C++ projects
 
+# Output data directory
+out/
+
 # Python
 __pycache__/
 *.py[cod]

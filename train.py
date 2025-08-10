@@ -2,6 +2,8 @@ import torch
 from torch.utils.data import DataLoader
 import torch.optim as optim
 import torch.nn.functional as F
+import os
+import re
 
 from dataset import TrainingDataset
 import numpy as np
@@ -11,6 +13,13 @@ def masked_log_softmax(logits, mask, dim=-1):
     mask = mask.bool()
     logits = logits.masked_fill(~mask, float('-inf'))
     return F.log_softmax(logits, dim=dim)
+
+def get_next_model_path(out_dir="out"):
+    os.makedirs(out_dir, exist_ok=True)
+    model_files = [f for f in os.listdir(out_dir) if re.match(r"model_(\d+)\.pt$", f)]
+    numbers = [int(re.match(r"model_(\d+)\.pt$", f).group(1)) for f in model_files if re.match(r"model_(\d+)\.pt$", f)]
+    next_num = max(numbers, default=0) + 1
+    return os.path.join(out_dir, f"model_{next_num:03d}.pt")
 
 def main():
     # Hyperparameters
@@ -36,9 +45,10 @@ def main():
             board_tensor = batch['board_tensor'].to(device)  # (B, 7, 8, 8)
             legal_mask = batch['legal_mask'].to(device)      # (B, 4096)
             child_visit_counts = batch['child_visit_counts'].float().to(device)  # (B, 4096)
+            final_value = batch['final_value'].float().to(device)  # (B,)
 
             # Forward pass
-            policy_logits, _ = model(board_tensor)
+            policy_logits, value_pred = model(board_tensor)
 
             # Masked log softmax
             log_probs = masked_log_softmax(policy_logits, legal_mask, dim=1)
@@ -47,7 +57,13 @@ def main():
             target_policy = child_visit_counts / (child_visit_counts.sum(dim=1, keepdim=True) + 1e-8)
 
             # Cross-entropy loss (negative log-likelihood)
-            loss = -(target_policy * log_probs).sum(dim=1).mean()
+            policy_loss = -(target_policy * log_probs).sum(dim=1).mean()
+
+            # MSE loss for value prediction
+            value_loss = F.mse_loss(value_pred.squeeze(-1), final_value)
+
+            # Total loss
+            loss = policy_loss + value_loss
 
             optimizer.zero_grad()
             loss.backward()
@@ -57,6 +73,11 @@ def main():
 
         avg_loss = total_loss / len(dataset)
         print(f"Epoch {epoch+1}/{epochs} - Avg Loss: {avg_loss:.4f}")
+
+    # Save model after training
+    save_path = get_next_model_path("out")
+    torch.jit.save(model, save_path)
+    print(f"Model saved to {save_path}")
 
 if __name__ == "__main__":
     main()
