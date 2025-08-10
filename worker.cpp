@@ -35,8 +35,11 @@ void self_play(Game& game, int game_id) {
   bool is_game_over = false;
   int moves_played = 0;
   while (!is_game_over && moves_played < 100) {
-    // select move
+    // Select move by running N simulations
     int action = select_move(game);
+
+    // Save game state at current position.
+    save_game_state(game);
 
     // For logging:
     VLOG(1) << absl::StrFormat(
@@ -48,9 +51,6 @@ void self_play(Game& game, int game_id) {
     }
 
     update_root(game, action);
-
-    // Save game state at current position.
-    save_game_state(game);
 
     moves_played++;
     is_game_over = game.root->is_leaf;

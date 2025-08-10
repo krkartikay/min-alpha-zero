@@ -41,7 +41,7 @@ class TrainingDataset(Dataset):
 # Usage example:
 if __name__ == "__main__":
     dataset = TrainingDataset("training_data.bin")
-    dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
     print(f"Loaded {len(dataset)} training records.")
     sample = dataset[0]
