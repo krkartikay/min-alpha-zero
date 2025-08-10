@@ -63,6 +63,9 @@ void process_batch(std::vector<eval_request_t> nodes) {
   auto policy_batch = output_tuple->elements()[0].toTensor().to(torch::kCPU);
   auto value_batch = output_tuple->elements()[1].toTensor().to(torch::kCPU);
 
+  // Convert logits to probabilities using softmax
+  policy_batch = torch::softmax(policy_batch, 1);
+
   // Copy results back to nodes and signal completion
   for (size_t i = 0; i < nodes.size(); ++i) {
     auto& [node, p] = nodes[i];
