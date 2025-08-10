@@ -134,6 +134,9 @@ void run_simulation(Game& game) {
   // evaluate node
   // we could reach an unevaluated node
   // or a leaf node, even if it is already evaluated
+  if (current_node->is_leaf) {
+    evaluate_leaf_node(*current_node);
+  }
   if (!current_node->is_evaluated) {
     evaluate(*current_node);
   }
@@ -268,6 +271,19 @@ void evaluate(Node& node) {
 
   // Wait for evaluation to complete
   future.get();
+}
+
+void evaluate_leaf_node(Node& node) {
+  // Doesn't need the neural net.
+  // If we're checkmated value is -1.
+  node.is_evaluated = true;
+  auto result = node.board.isGameOver();
+  if (result.first == chess::GameResultReason::CHECKMATE) {
+    node.value = -1;
+  } else {
+    node.value = 0;
+  }
+  // node.policy doesn't need to be set, all 0 is ok
 }
 
 // -----------------------------------------------------------

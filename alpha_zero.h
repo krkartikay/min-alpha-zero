@@ -134,6 +134,7 @@ void process_batch(std::vector<eval_request_t> nodes);
 
 void run_worker();
 void evaluate(Node& node);
+void evaluate_leaf_node(Node& node);
 
 // Logging and Debugging ---------------------------------
 
