@@ -122,9 +122,6 @@ int select_move(Game& game);
 void run_simulation(Game& game);
 int select_action(Node& node);
 void append_to_training_file(const Game& game);
-// To dump intermediate states to a file for debugging
-void dump_game_tree_to_file(const Game& game, int g = 0, int m = 0,
-                            int chosen_action = -1);
 
 // Evaluator thread ------------------------------------------
 
@@ -139,6 +136,19 @@ void run_worker();
 void evaluate(Node& node);
 
 // Logging and Debugging ---------------------------------
+
+struct FileSink : absl::LogSink {
+  explicit FileSink(const std::string& path);
+  ~FileSink() override;
+  void Send(const absl::LogEntry& e) override;
+
+ private:
+  std::ofstream ofs;
+};
+
+// To dump intermediate states to a file for debugging
+void dump_game_tree_to_file(const Game& game, int g = 0, int m = 0,
+                            int chosen_action = -1);
 
 std::string board_to_string(const chess::Board& board);
 

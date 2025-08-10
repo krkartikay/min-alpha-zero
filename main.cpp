@@ -3,6 +3,7 @@
 #include <absl/log/globals.h>
 #include <absl/log/initialize.h>
 #include <absl/log/log.h>
+#include <absl/log/log_sink_registry.h>
 
 #include "alpha_zero.h"
 
@@ -38,6 +39,8 @@ int main(int argc, char* argv[]) {
   absl::InitializeLog();
   absl::SetMinLogLevel(absl::LogSeverityAtLeast::kInfo);
   absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfo);
+  alphazero::FileSink file_sink("alpha_zero.log");
+  absl::AddLogSink(&file_sink);
 
   alphazero::init_globals();
 

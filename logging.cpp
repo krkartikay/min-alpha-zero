@@ -4,6 +4,24 @@
 
 namespace alphazero {
 
+FileSink::FileSink(const std::string& p) : ofs(p, std::ios::app) {}
+
+FileSink::~FileSink() {
+  if (ofs.is_open()) ofs.close();
+}
+
+void FileSink::Send(const absl::LogEntry& e) {
+  if (!ofs.is_open()) return;
+
+  const char sev = "IWEF"[static_cast<int>(e.log_severity())];
+  const std::string ts =
+      absl::FormatTime("%m%d %H:%M:%E6S", e.timestamp(), absl::LocalTimeZone());
+  ofs << absl::StrFormat("%c%s tid:%llu %s:%d] %s", sev, ts,
+                         static_cast<unsigned long long>(e.tid()),
+                         e.source_basename(), e.source_line(), e.text_message())
+      << std::endl;
+}
+
 // -----------------------------------------------------------
 
 constexpr const char* kSeparatorLine =
