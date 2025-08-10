@@ -6,63 +6,80 @@ namespace alphazero {
 
 // -----------------------------------------------------------
 
+constexpr const char* kSeparatorLine =
+    "========================================================\n";
+constexpr const char* kChildSeparatorLine =
+    "-------------------------------------------------------\n";
+
 template <typename T>
-void dump_sparse_array(const Node& node, std::array<T, kNumActions> arr,
-                       std::ostream& os) {
-  os << "[";
+std::string dump_sparse_array(const Node& node,
+                              const std::array<T, kNumActions>& arr) {
+  std::string out = "[";
   for (size_t i = 0; i < arr.size(); ++i) {
     if (!node.legal_mask[i]) continue;
     chess::Move move = int_to_move(i, node.board);
     std::string move_str = chess::uci::moveToSan(node.board, move);
     if (arr[i] != 0) {
-      os << "(" << move_str << ":" << arr[i] << "),";
+      absl::StrAppendFormat(&out, "(%s:%v),", move_str, arr[i]);
     }
   }
-  os << "]";
+  out += "]";
+  return out;
 }
 
-void dump_node(const Node& node, std::ostream& os, int chosen_action,
-               int depth) {
-  std::string indent = std::string(depth * 4, '>');
-  os << indent << "========================================================\n";
-  os << indent << "Node (" << &node << "): " << node.move_history << "\n";
-  os << indent << "Board:\n" << board_to_string(node.board) << "\n";
-  os << indent << "Parent node (" << node.parent
-     << "): " << (node.parent ? node.parent->move_history : "None") << "\n";
-  os << indent << "Is Evaluated? " << (node.is_evaluated ? "Yes" : "No")
-     << "\n";
-  os << indent << "Is Leaf? " << (node.is_leaf ? "Yes" : "No") << "\n";
-  os << indent << "Value: " << node.value << "\n";
-  os << indent << "Legal Mask: ";
-  dump_sparse_array(node, node.legal_mask, os);
-  os << "\n";
-  os << indent << "Policy: ";
-  dump_sparse_array(node, node.policy, os);
-  os << "\n";
-  os << indent << "Child Visits: ";
-  dump_sparse_array(node, node.child_visits, os);
-  os << "\n";
-  os << indent << "Child Values: ";
-  dump_sparse_array(node, node.child_values, os);
-  os << "\n";
+std::string dump_node(const Node& node, int chosen_action, int depth) {
+  std::string indent(depth * 4, '>');
+  std::string children_indices, children_details;
+
+  for (const auto& [child_idx, child] : node.child_nodes) {
+    absl::StrAppendFormat(&children_indices, "%s  Child (%d) at Node (%p):\n",
+                          indent, child_idx,
+                          static_cast<const void*>(child.get()));
+  }
+  for (const auto& [child_idx, child] : node.child_nodes) {
+    absl::StrAppendFormat(&children_details, "%s  Child (%d):\n%s%s%s", indent,
+                          child_idx, dump_node(*child, -1, depth + 1), indent,
+                          kChildSeparatorLine);
+  }
+
+  std::string action_str;
   if (chosen_action != -1) {
     chess::Move move = int_to_move(chosen_action, node.board);
-    os << indent << "Action chosen: " << chosen_action << " ("
-       << chess::uci::moveToSan(node.board, move) << ")\n";
+    action_str =
+        absl::StrFormat("%sAction chosen: %d (%s)\n", indent, chosen_action,
+                        chess::uci::moveToSan(node.board, move));
   }
-  os << indent << "Number of children: " << node.child_nodes.size() << "\n";
-  os << indent << "Children index: \n";
-  for (const auto& [child_idx, child] : node.child_nodes) {
-    os << indent << "  Child (" << child_idx << ") at Node (" << child
-       << "):\n";
-  }
-  os << indent << "Children: \n";
-  for (const auto& [child_idx, child] : node.child_nodes) {
-    os << indent << "  Child (" << child_idx << "):\n";
-    dump_node(*child, os, -1, depth + 1);
-    os << indent << "-------------------------------------------------------\n";
-  }
-  os << indent << "========================================================\n";
+
+  return absl::StrFormat(
+      "%s%s"
+      "%sNode (%p): %s\n"
+      "%sBoard:\n%s\n"
+      "%sParent node (%p): %s\n"
+      "%sIs Evaluated? %s\n"
+      "%sIs Leaf? %s\n"
+      "%sValue: %v\n"
+      "%sLegal Mask: %s\n"
+      "%sPolicy: %s\n"
+      "%sChild Visits: %s\n"
+      "%sChild Values: %s\n"
+      "%s%s"
+      "%sNumber of children: %d\n"
+      "%sChildren index: \n"
+      "%s"
+      "%sChildren: \n"
+      "%s"
+      "%s%s",
+      indent, kSeparatorLine, indent, static_cast<const void*>(&node),
+      node.move_history, indent, board_to_string(node.board), indent,
+      static_cast<const void*>(node.parent),
+      node.parent ? node.parent->move_history : "None", indent,
+      node.is_evaluated ? "Yes" : "No", indent, node.is_leaf ? "Yes" : "No",
+      indent, node.value, indent, dump_sparse_array(node, node.legal_mask),
+      indent, dump_sparse_array(node, node.policy), indent,
+      dump_sparse_array(node, node.child_visits), indent,
+      dump_sparse_array(node, node.child_values), indent, action_str, indent,
+      static_cast<int>(node.child_nodes.size()), indent, children_indices,
+      indent, children_details, indent, kSeparatorLine);
 }
 
 void dump_game_tree_to_file(const Game& game, int g, int m, int chosen_action) {
@@ -74,7 +91,7 @@ void dump_game_tree_to_file(const Game& game, int g, int m, int chosen_action) {
     LOG(ERROR) << "Failed to open file: " << filename;
     return;
   }
-  dump_node(*game.root, ofs, chosen_action, 0);
+  ofs << dump_node(*game.root, chosen_action, 0);
   ofs.close();
 }
 
