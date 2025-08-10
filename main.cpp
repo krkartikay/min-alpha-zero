@@ -16,6 +16,8 @@ ABSL_FLAG(int, num_games, 1, "Number of games to play in self-play");
 ABSL_FLAG(std::string, model_path, "model.pt", "Path to the model file");
 ABSL_FLAG(std::string, training_file, "training_data.bin",
           "File to store training data");
+ABSL_FLAG(bool, debug, false,
+          "Enable debug mode to dump game tree to file after each move");
 
 namespace alphazero {
 
@@ -28,6 +30,7 @@ void init_globals() {
   g_config.num_games = absl::GetFlag(FLAGS_num_games);
   g_config.model_path = absl::GetFlag(FLAGS_model_path);
   g_config.training_file = absl::GetFlag(FLAGS_training_file);
+  g_config.debug = absl::GetFlag(FLAGS_debug);
   // initialize the evaluation queue with the channel size
   g_evaluation_queue = std::make_unique<eval_channel_t>(g_config.channel_size);
 }

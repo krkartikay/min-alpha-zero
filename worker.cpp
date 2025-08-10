@@ -15,7 +15,7 @@ void run_worker() {
   for (int i = 0; i < g_config.num_games; ++i) {
     fibers.emplace_back([i]() {
       Game game;
-      self_play(game);
+      self_play(game, i);
       LOG(INFO) << absl::StrFormat("Game %d finished.", i);
     });
   }
@@ -30,7 +30,7 @@ void run_worker() {
 // Self play logic
 
 // Selects moves on game tree then makes the move until game is finished
-void self_play(Game& game) {
+void self_play(Game& game, int game_id) {
   // Keep going while the game is not over
   bool is_game_over = false;
   int moves_played = 0;
@@ -40,9 +40,12 @@ void self_play(Game& game) {
 
     // For logging:
     VLOG(1) << absl::StrFormat(
-        "Move played: %s",
+        "(Game %d) Move played: %s", game_id,
         chess::uci::moveToSan(game.root->board,
                               int_to_move(action, game.root->board)));
+    if (g_config.debug) {
+      dump_game_tree_to_file(game, game_id, moves_played, action);
+    }
 
     update_root(game, action);
 

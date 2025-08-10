@@ -116,7 +116,7 @@ struct Game {
 };
 
 // Runs N number of MCTS simulations to select a move to play
-void self_play(Game& game);
+void self_play(Game& game, int game_id);
 void update_root(Game& game, int action);
 void save_game_state(Game& game);
 void update_game_history(Game& game);
