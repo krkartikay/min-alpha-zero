@@ -146,9 +146,8 @@ void run_simulation(Game& game) {
 }
 
 int select_action(Node& node) {
-  if (node.is_leaf) {
-    return -1;
-  }
+  CHECK(!node.is_leaf) << "Cannot select action on leaf node: "
+                       << node.move_history;
   // current node visit count = sum of child visit counts + 1
   float node_visits =
       std::accumulate(node.child_visits.begin(), node.child_visits.end(), 0) +

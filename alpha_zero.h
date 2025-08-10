@@ -67,10 +67,14 @@ struct Node {
   bool is_evaluated = false;
   bool is_leaf = false;
   int parent_action = -1;
+  // value of this node as predicted by the model
   float value = 0.0f;
+  // legal_mask[i] = true if action i is legal, false otherwise
+  // policy[i] = prior probability of action i (from model)
   std::array<bool, kNumActions> legal_mask = {};
   std::array<float, kNumActions> policy = {};
-  // sum of values of child nodes and visit counts of child nodes
+  // child_visits[i] = number of visits for the i-th action
+  // child_values[i] = sum of values for the i-th action
   std::array<int, kNumActions> child_visits = {};
   std::array<float, kNumActions> child_values = {};
   // Mutex to ensure only one fiber processes this node at a time

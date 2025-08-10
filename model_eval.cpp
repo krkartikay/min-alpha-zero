@@ -158,24 +158,16 @@ void run_agent_tournament() {
 
   std::vector<GameResult> results(num_games);
 
-  // Run games concurrently using fibers
-  std::vector<boost::fibers::fiber> fibers;
+  // Run games sequentially
   for (int i = 0; i < num_games; ++i) {
-    fibers.emplace_back([&, i]() {
-      RandomAgent random_agent;
-      MCTSAgent mcts_agent;
-      GameResult result =
-          play_agent_vs_agent(mcts_agent, random_agent, verbose);
-      results[i] = result;
-      log("Game %d: %s", i + 1,
-          result.agent_wins ? "MCTS wins"
-          : result.draws    ? "Draw"
-                            : "Random wins");
-    });
-  }
-
-  for (auto& f : fibers) {
-    f.join();
+    RandomAgent random_agent;
+    MCTSAgent mcts_agent;
+    GameResult result = play_agent_vs_agent(mcts_agent, random_agent, verbose);
+    results[i] = result;
+    log("Game %d: %s", i + 1,
+        result.agent_wins ? "MCTS wins"
+        : result.draws    ? "Draw"
+                          : "Random wins");
   }
 
   for (const auto& result : results) {
