@@ -54,6 +54,7 @@ struct Config {
   duration_t eval_timeout;
   std::string model_path;
   std::string training_file;
+  bool debug = false;
 };
 
 inline Config g_config;
@@ -121,6 +122,9 @@ int select_move(Game& game);
 void run_simulation(Game& game);
 int select_action(Node& node);
 void append_to_training_file(const Game& game);
+// To dump intermediate states to a file for debugging
+void dump_node(const Node& node, std::ostream& os, int depth = 0);
+void dump_game_tree_to_file(const Game& game, int g = 0, int m = 0);
 
 // Evaluator thread ------------------------------------------
 

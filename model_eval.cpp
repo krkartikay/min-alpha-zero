@@ -18,6 +18,8 @@ ABSL_FLAG(int, num_games, 100, "Number of games to play in evaluation.");
 ABSL_FLAG(std::string, model_path, "model.pt", "Path to the model file");
 ABSL_FLAG(std::string, training_file, "training_data.bin",
           "File to store training data");
+ABSL_FLAG(bool, debug, false,
+          "Enable debug logging and intermediate state dumps");
 
 namespace alphazero {
 
@@ -93,19 +95,24 @@ GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other) {
     // Get action from current agent
     int action = current->select_action(game);
     if (action == -1) break;  // No legal moves
+
+    // Let's store game tree state after the move
+    if (g_config.debug) {
+      dump_game_tree_to_file(game);
+    }
+
     VLOG(1) << absl::StrFormat("Agent %s selected action: %d", current->name(),
                                action);
 
     // For move logging
     chess::Move move = int_to_move(action, game.root->board);
     std::string move_str = chess::uci::moveToSan(game.root->board, move);
-
-    // Make the move using existing infrastructure
-    update_root(game, action);
-
     std::string tab = (moves_played % 2 == 0) ? " " : "\t...";
     VLOG(1) << absl::StrFormat("%3d.%s%s", moves_played / 2 + 1, tab, move_str);
     VLOG(2) << absl::StrFormat("Board:\n%s", board_to_string(game.root->board));
+
+    // Make the move using existing infrastructure
+    update_root(game, action);
 
     moves_played++;
   }
@@ -189,6 +196,7 @@ void init_globals() {
   g_config.num_games = absl::GetFlag(FLAGS_num_games);
   g_config.model_path = absl::GetFlag(FLAGS_model_path);
   g_config.training_file = absl::GetFlag(FLAGS_training_file);
+  g_config.debug = absl::GetFlag(FLAGS_debug);
   // initialize the evaluation queue with the channel size
   g_evaluation_queue = std::make_unique<eval_channel_t>(g_config.channel_size);
 }
