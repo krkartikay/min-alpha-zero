@@ -16,7 +16,7 @@ ABSL_FLAG(std::string, model_path, "model.pt", "Path to the model file");
 ABSL_FLAG(std::string, training_file, "training_data.bin",
           "File to store training data");
 
-using namespace alphazero;
+namespace alphazero {
 
 void init_globals() {
   g_config.channel_size = absl::GetFlag(FLAGS_channel_size);
@@ -31,22 +31,27 @@ void init_globals() {
   g_evaluation_queue = std::make_unique<eval_channel_t>(g_config.channel_size);
 }
 
+}  // namespace alphazero
+
 int main(int argc, char* argv[]) {
   absl::ParseCommandLine(argc, argv);
   absl::InitializeLog();
-  init_globals();
+  absl::SetMinLogLevel(absl::LogSeverityAtLeast::kInfo);
+  absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfo);
+
+  alphazero::init_globals();
 
   // Create boost channel
   LOG(INFO) << "Starting AlphaZero...";
 
   // Start evaluator and worker threads on actual system threads
   LOG(INFO) << "Starting Evaluator and worker threads.";
-  std::thread evaluator_thread(&run_evaluator);
-  std::thread worker_thread(&run_worker);
+  std::thread evaluator_thread(&alphazero::run_evaluator);
+  std::thread worker_thread(&alphazero::run_worker);
 
   worker_thread.join();
 
-  g_stop_evaluator = true;  // Signal evaluator to stop
+  alphazero::g_stop_evaluator = true;  // Signal evaluator to stop
   evaluator_thread.join();
 
   return 0;
