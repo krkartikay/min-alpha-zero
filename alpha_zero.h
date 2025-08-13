@@ -51,6 +51,7 @@ struct Config {
   int num_simulations;
   int batch_size;
   int num_games;
+  int num_threads;
   duration_t eval_timeout;
   std::string model_path;
   std::string training_file;

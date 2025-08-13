@@ -53,6 +53,13 @@ target_link_libraries(alpha_zero
   ${Boost_LIBRARIES}
 )
 
+add_executable(test_board test_board.cpp ${SOURCES})
+target_link_libraries(test_board
+  ${ABSL_LIBS}
+  ${TORCH_LIBRARIES}
+  ${Boost_LIBRARIES}
+)
+
 add_executable(model_eval model_eval.cpp ${SOURCES})
 
 target_link_libraries(model_eval

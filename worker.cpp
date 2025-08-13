@@ -2,11 +2,16 @@
 
 namespace alphazero {
 
-std::mt19937 g_rng;  // Random number generator for MCTS
+// Thread-local random number generator for MCTS to avoid race conditions
+// Each worker thread will have its own RNG instance
+thread_local std::mt19937 g_rng(std::random_device{}());
 
 constexpr float c_puct = 1.0;
 
 // Worker thread main loop
+// Each worker thread runs this function independently
+// Multiple worker threads can run concurrently, each playing a portion of the
+// total games
 void run_worker() {
   LOG(INFO) << absl::StrFormat("Starting worker, playing %d games.",
                                g_config.num_games);
