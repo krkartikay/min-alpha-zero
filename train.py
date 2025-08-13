@@ -4,6 +4,25 @@ import torch.optim as optim
 import torch.nn.functional as F
 import os
 import re
+import sys  # Added for logging
+from datetime import datetime  # Added for timestamps
+
+# Redirect print statements to both console and log file
+class Logger:
+    def __init__(self, log_file):
+        self.terminal = sys.stdout
+        self.log = open(log_file, "a")
+
+    def write(self, message):
+        timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S] ")
+        self.terminal.write(message)
+        self.log.write(timestamp + message)
+
+    def flush(self):
+        self.terminal.flush()
+        self.log.flush()
+
+sys.stdout = Logger("training.log")
 
 from dataset import TrainingDataset
 import numpy as np
@@ -39,6 +58,7 @@ def main():
     model.train()
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
+    print("Starting training...")
     for epoch in range(epochs):
         total_loss = 0.0
         for i, batch in enumerate(dataloader):
