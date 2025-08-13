@@ -41,7 +41,7 @@ def main():
 
     for epoch in range(epochs):
         total_loss = 0.0
-        for batch in dataloader:
+        for i, batch in enumerate(dataloader):
             board_tensor = batch['board_tensor'].to(device)  # (B, 7, 8, 8)
             legal_mask = batch['legal_mask'].to(device)      # (B, 4096)
             child_visit_counts = batch['child_visit_counts'].float().to(device)  # (B, 4096)
@@ -57,7 +57,7 @@ def main():
             target_policy = child_visit_counts / (child_visit_counts.sum(dim=1, keepdim=True) + 1e-8)
 
             # Cross-entropy loss (negative log-likelihood)
-            policy_loss = -(target_policy * log_probs).sum(dim=1).mean()
+            policy_loss = F.cross_entropy(policy_logits, target_policy, reduction='mean')
 
             # MSE loss for value prediction
             value_loss = F.mse_loss(value_pred.squeeze(-1), final_value)
@@ -70,6 +70,8 @@ def main():
             optimizer.step()
 
             total_loss += loss.item() * board_tensor.size(0)
+            print(f"Batch {i+1} \t Policy loss: {policy_loss.item():.4f}\t"
+                  f"Value loss: {value_loss.item():.4f}\t Total loss: {loss.item():.4f}")
 
         avg_loss = total_loss / len(dataset)
         print(f"Epoch {epoch+1}/{epochs} - Avg Loss: {avg_loss:.4f}")
