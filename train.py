@@ -16,7 +16,9 @@ class Logger:
     def write(self, message):
         timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S] ")
         self.terminal.write(message)
-        self.log.write(timestamp + message)
+        if self.log != '\n':
+            self.log.write(timestamp)
+        self.log.write(message)
 
     def flush(self):
         self.terminal.flush()
