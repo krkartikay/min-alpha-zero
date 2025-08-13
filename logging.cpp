@@ -16,7 +16,7 @@ void FileSink::Send(const absl::LogEntry& e) {
   const char sev = "IWEF"[static_cast<int>(e.log_severity())];
   const std::string ts =
       absl::FormatTime("%m%d %H:%M:%E6S", e.timestamp(), absl::LocalTimeZone());
-  ofs << absl::StrFormat("[%c %s %s:%d\t]%s", sev, ts, e.source_basename(),
+  ofs << absl::StrFormat("[%c %s %s:%d\t]\t%s", sev, ts, e.source_basename(),
                          e.source_line(), e.text_message())
       << std::endl;
 }
