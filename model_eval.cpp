@@ -88,8 +88,9 @@ GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other,
 
   int moves_played = 0;
 
-  LOG(INFO) << absl::StrFormat("Game start: White=%s, Black=%s", white->name(),
-                               black->name());
+  // LOG(INFO) << absl::StrFormat("Game start: White=%s, Black=%s",
+  // white->name(),
+  //                              black->name());
 
   while (!game.root->is_leaf && moves_played < 100) {
     ChessAgent* current = (moves_played % 2 == 0) ? white : black;
