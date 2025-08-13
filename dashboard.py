@@ -23,6 +23,15 @@ def read_log(file_path):
     lines = file.readlines()
   processed_lines = []
   for line in lines:
+    # Match the timestamp and trim milliseconds to 3 digits, keep the rest of the line
+    match = re.match(r"\[I 0813 (\d{2}:\d{2}:\d{2})\.(\d{6}) ([^\]]+)\] ?(.*)", line)
+    if match:
+      time_part = match.group(1)
+      ms_part = match.group(2)[:3]  # Only first 3 digits for milliseconds
+      rest = match.group(3)
+      after_bracket = match.group(4)
+      # Reconstruct line without "I 0813" and with trimmed ms, keep the rest of the line
+      line = f"[{time_part}.{ms_part} {rest}] {after_bracket}".rstrip()
     if any(excluded in line for excluded in EXCLUDE_LOGS):
       continue
     processed_lines.append(line.strip())
