@@ -131,7 +131,9 @@ void append_to_training_file(const Game& game);
 void run_evaluator();
 void init_model();
 std::vector<eval_request_t> get_requests_batch();
-void process_batch(std::vector<eval_request_t> nodes);
+void cpu_stage();
+void gpu_stage();
+void post_stage();
 
 // Worker thread---------------------------------------------
 
