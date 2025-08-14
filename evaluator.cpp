@@ -3,26 +3,9 @@
 
 #include "alpha_zero.h"
 
+inline torch::jit::script::Module g_model;
+
 namespace alphazero {
-
-torch::jit::script::Module g_model;
-
-struct PreparedBatch {
-  std::vector<eval_request_t> reqs;       // Node* + promise
-  torch::Tensor               cpu_tensor; // [B,7,8,8] on host
-};
-
-struct InferredBatch {
-  std::vector<eval_request_t> reqs;   // Node* + promise
-  torch::Tensor policy_cuda;          // [B,kNumActions]  (soft-maxed, still on GPU)
-  torch::Tensor value_cuda;           // [B]              (on GPU)
-};
-
-using batch_channel_t = boost::fibers::buffered_channel<PreparedBatch>;
-using out_channel_t = boost::fibers::buffered_channel<InferredBatch>;
-
-std::unique_ptr<batch_channel_t> g_gpu_queue;
-std::unique_ptr<out_channel_t> g_out_queue;
 
 // Evaluator thread main loop
 void run_evaluator() {
@@ -31,20 +14,16 @@ void run_evaluator() {
   LOG(INFO) << "Loading model...";
   init_model();
   LOG(INFO) << "Evaluator started.";
-
-  std::thread gpu_thr(gpu_stage);
-  std::thread post_thr(post_stage);
-  cpu_stage();  // current thread
-  gpu_thr.join();
-  post_thr.join();
+  while (!g_stop_evaluator) {
+    std::vector<eval_request_t> req_batch = get_requests_batch();
+    process_batch(std::move(req_batch));
+  }
 }
 
 void init_model() {
   g_model = torch::jit::load(g_config.model_path);
   g_model.eval();
   g_model.to(torch::kCUDA);
-  g_gpu_queue = std::make_unique<batch_channel_t>(g_config.channel_size);
-  g_out_queue = std::make_unique<out_channel_t >(g_config.channel_size);
 }
 
 std::vector<eval_request_t> get_requests_batch() {
@@ -63,58 +42,38 @@ std::vector<eval_request_t> get_requests_batch() {
   return req_batch;
 }
 
-void cpu_stage() {
-  while (!g_stop_evaluator) {
-    auto batch_reqs = get_requests_batch();
-    if (batch_reqs.empty()) continue;
+void process_batch(std::vector<eval_request_t> nodes) {
+  // Copy Tensors into a single batch tensor
+  const size_t batch_size = nodes.size();
+  torch::Tensor input = torch::empty({int(batch_size), 7, 8, 8},
+                                     torch::TensorOptions().dtype(torch::kF32));
 
-    int B = static_cast<int>(batch_reqs.size());
-    torch::Tensor cpu = torch::empty({B, 7, 8, 8},
-                         torch::dtype(torch::kF32));
-
-    for (int i = 0; i < B; ++i) {
-      auto buf = board_to_tensor(batch_reqs[i].first->board);
-      std::memcpy(cpu[i].data_ptr(), buf.data(),
-                  kInputSize * sizeof(float));
-    }
-    g_gpu_queue->push({std::move(batch_reqs), std::move(cpu)});
+  // Convert boards to tensors and copy
+  for (size_t i = 0; i < batch_size; ++i) {
+    std::array<float, kInputSize> buf = board_to_tensor(nodes[i].first->board);
+    std::memcpy(input[i].data_ptr(), buf.data(), kInputSize * sizeof(float));
   }
-  g_gpu_queue->close();
-}
 
-void gpu_stage() {
-  PreparedBatch pb;
-  while (g_gpu_queue->pop(pb) == channel_op_status::success) {
-    auto output = g_model.forward({pb.cpu_tensor.to(torch::kCUDA)});
-    auto tup    = output.toTuple();
+  // Move input to CUDA and run the model
+  auto input_cuda = input.to(torch::kCUDA);
+  auto output = g_model.forward({input_cuda});
 
-    auto policy_cuda = torch::softmax(tup->elements()[0].toTensor(), 1);
-    auto value_cuda  = tup->elements()[1].toTensor();
+  // The model output is a tuple of (policy, value) batched tensors
+  auto output_tuple = output.toTuple();
+  auto policy_batch = output_tuple->elements()[0].toTensor().to(torch::kCPU);
+  auto value_batch = output_tuple->elements()[1].toTensor().to(torch::kCPU);
 
-    g_out_queue->push({std::move(pb.reqs),
-                       std::move(policy_cuda),
-                       std::move(value_cuda)});
-  }
-  g_out_queue->close();
-}
+  // Convert logits to probabilities using softmax
+  policy_batch = torch::softmax(policy_batch, 1);
 
-void post_stage() {
-  InferredBatch ib;
-  while (g_out_queue->pop(ib) == channel_op_status::success) {
-    // async copy to cpu
-    auto policy_cpu = ib.policy_cuda.to(torch::kCPU, true);
-    auto value_cpu  = ib.value_cuda .to(torch::kCPU, true);
-    torch::cuda::synchronize();
-
-    for (size_t i = 0; i < ib.reqs.size(); ++i) {
-      auto& [node, prom] = ib.reqs[i];
-      node->value = value_cpu[i].item<float>();
-      std::memcpy(node->policy.data(),
-                  policy_cpu[i].data_ptr(),
-                  kNumActions * sizeof(float));
-      node->is_evaluated = true;
-      prom.set_value();
-    }
+  // Copy results back to nodes and signal completion
+  for (size_t i = 0; i < nodes.size(); ++i) {
+    auto& [node, p] = nodes[i];
+    node->value = value_batch[i].item<float>();
+    std::memcpy(node->policy.data(), policy_batch[i].data_ptr(),
+                kNumActions * sizeof(float));
+    node->is_evaluated = true;
+    p.set_value();
   }
 }
 
