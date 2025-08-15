@@ -8,7 +8,12 @@ ARG TORCH_DEVICE=cu118
 # Get dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake git wget unzip \
-    libabsl-dev libboost-all-dev libgtest-dev
+    libabsl-dev libboost-all-dev libgtest-dev \
+    python3 python3-pip
+
+# install PyTorch for cu118
+RUN python3 -m pip install --no-cache-dir "torch==${TORCH_VERSION}+${TORCH_DEVICE}" \
+    --index-url https://download.pytorch.org/whl/${TORCH_DEVICE}
 
 # Download libtorch zip and install it
 RUN wget --progress=dot:giga https://download.pytorch.org/libtorch/${TORCH_DEVICE}/libtorch-cxx11-abi-shared-with-deps-${TORCH_VERSION}%2B${TORCH_DEVICE}.zip -O /tmp/libtorch.zip \
@@ -31,7 +36,7 @@ ENV PATH=${CUDA_HOME}/bin:$PATH
 WORKDIR /app
 COPY . /app
 
-RUN touch model.pt && \
+RUN python3 model.py && \
     cmake --preset build && \
     cmake --build --preset build -j
 

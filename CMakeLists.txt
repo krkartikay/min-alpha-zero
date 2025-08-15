@@ -39,7 +39,6 @@ set(ABSL_LIBS
   absl::flags
   absl::flags_parse
   absl::log
-  # "$<LINK_LIBRARY:WHOLE_ARCHIVE,absl::log_flags>"
   absl::log_initialize
   absl::log_globals
   absl::log_flags
