@@ -250,14 +250,12 @@ Node* Node::getChildNode(int move_idx) {
 
 template <class T>
 static void write_bin(std::ofstream& out, const T& v) {
-  auto bytes = std::as_bytes(std::span{&v, 1});
-  out.write((char*)(bytes.data()), bytes.size());
+  out.write(reinterpret_cast<const char*>(&v), sizeof(T));
 }
 
 template <class T, std::size_t N>
 static void write_bin(std::ofstream& out, const std::array<T, N>& a) {
-  auto bytes = std::as_bytes(std::span{a});
-  out.write((char*)(bytes.data()), bytes.size());
+  out.write(reinterpret_cast<const char*>(a.data()), sizeof(T) * N);
 }
 
 void append_to_training_file(const Game& game) {
