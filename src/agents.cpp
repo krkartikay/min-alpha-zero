@@ -26,7 +26,7 @@ std::string RandomAgent::name() const { return "Random"; }
 MCTSAgent::MCTSAgent() {}
 
 int MCTSAgent::select_action(Game& game) {
-  int action = select_move(game);
+  int action = game.selectMove();
   return action;
 }
 
@@ -63,7 +63,7 @@ GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other,
     VLOG(1) << absl::StrFormat("%3d.%s%s", moves_played / 2 + 1, tab, move_str);
     VLOG(2) << absl::StrFormat("Board:\n%s", board_to_string(game.root->board));
 
-    update_root(game, action);
+    game.updateRoot(action);
 
     moves_played++;
   }

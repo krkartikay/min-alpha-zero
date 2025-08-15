@@ -32,7 +32,7 @@ using std::milli;
 using std::chrono::duration;
 using std::chrono::steady_clock;
 
-struct Node;
+class Node;
 
 using eval_request_t = std::pair<Node*, boost::fibers::promise<void>>;
 using eval_channel_t = boost::fibers::buffered_channel<eval_request_t>;
@@ -49,7 +49,8 @@ constexpr int kInputSize = 7 * 8 * 8;
 inline std::unique_ptr<eval_channel_t> g_evaluation_queue;
 inline bool g_stop_evaluator = false;
 
-struct Config {
+class Config {
+ public:
   int channel_size;
   int num_simulations;
   int batch_size;
@@ -65,7 +66,8 @@ inline Config g_config;
 
 // Game Tree functions ---------------------------------------
 
-struct Node {
+class Node {
+ public:
   const chess::Board board;
   Node* parent = nullptr;
   bool is_evaluated = false;
@@ -93,12 +95,19 @@ struct Node {
   Node& operator=(const Node&) = delete;
   Node(Node&&) = default;
   Node& operator=(Node&&) = default;
+  
+  // Methods that were previously free functions
+  int selectAction();
+  void evaluate();
+  void evaluateLeafNode();
+  
   // For debugging purposes Only
   std::string move_history;
 };
 
 // For storing training data
-struct GameState {
+class GameState {
+ public:
   // Board tensor at current state
   std::array<float, kInputSize> board_tensor = {};
   // Legal mask, we need this during training too
@@ -113,21 +122,24 @@ struct GameState {
   int final_value = 0;
 };
 
-struct Game {
+class Game {
+ public:
   Game();
+  
+  // Methods that were previously free functions
+  void selfPlay(int game_id);
+  void updateRoot(int action);
+  void saveGameState();
+  void updateGameHistory();
+  int selectMove();
+  void runSimulation();
+  void appendToTrainingFile() const;
+  
   std::unique_ptr<Node> root;
   std::vector<GameState> history;
 };
 
-// Runs N number of MCTS simulations to select a move to play
-void self_play(Game& game, int game_id);
-void update_root(Game& game, int action);
-void save_game_state(Game& game);
-void update_game_history(Game& game);
-int select_move(Game& game);
-void run_simulation(Game& game);
-int select_action(Node& node);
-void append_to_training_file(const Game& game);
+// Note: Game and Node methods moved to class definitions above
 
 // Evaluator thread ------------------------------------------
 
@@ -139,8 +151,6 @@ void process_batch(std::vector<eval_request_t> nodes);
 // Worker thread---------------------------------------------
 
 void run_worker();
-void evaluate(Node& node);
-void evaluate_leaf_node(Node& node);
 
 // Agents -----------------------------------------------------
 
@@ -168,7 +178,8 @@ class MCTSAgent : public ChessAgent {
   std::string name() const override;
 };
 
-struct GameResult {
+class GameResult {
+ public:
   int moves_played;
   int agent_wins;
   int draws;
@@ -181,7 +192,8 @@ void run_agent_tournament();
 
 // Logging and Debugging ---------------------------------
 
-struct FileSink : absl::LogSink {
+class FileSink : public absl::LogSink {
+ public:
   explicit FileSink(const std::string& path);
   ~FileSink() override;
   void Send(const absl::LogEntry& e) override;

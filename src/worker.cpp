@@ -20,7 +20,7 @@ void run_worker() {
   for (int i = 0; i < g_config.num_games; ++i) {
     fibers.emplace_back([i]() {
       Game game;
-      self_play(game, i);
+      game.selfPlay(i);
       LOG(INFO) << absl::StrFormat("Game %d finished.", i);
     });
   }
@@ -35,77 +35,96 @@ void run_worker() {
 // Self play logic
 
 // Selects moves on game tree then makes the move until game is finished
-void self_play(Game& game, int game_id) {
+// Game class method implementations
+void Game::selfPlay(int game_id) {
   // Keep going while the game is not over
   bool is_game_over = false;
   int moves_played = 0;
   while (!is_game_over && moves_played < 100) {
     // Select move by running N simulations
-    int action = select_move(game);
+    int action = selectMove();
 
     // Save game state at current position.
-    save_game_state(game);
+    saveGameState();
 
     // For logging:
     VLOG(1) << absl::StrFormat(
         "(Game %d) Move played: %s", game_id,
-        chess::uci::moveToSan(game.root->board,
-                              int_to_move(action, game.root->board)));
+        chess::uci::moveToSan(root->board, int_to_move(action, root->board)));
     if (g_config.debug) {
-      dump_game_tree_to_file(game, game_id, moves_played, action);
+      dump_game_tree_to_file(*this, game_id, moves_played, action);
     }
 
-    update_root(game, action);
+    updateRoot(action);
 
     moves_played++;
-    is_game_over = game.root->is_leaf;
+    is_game_over = root->is_leaf;
 
     VLOG(2) << absl::StrFormat("Current board state:\n%s",
-                               board_to_string(game.root->board));
+                               board_to_string(root->board));
   }
 
   // At the end of the game note final winner and write to training file.
-  update_game_history(game);
-  append_to_training_file(game);
+  updateGameHistory();
+  appendToTrainingFile();
   LOG(INFO) << absl::StrFormat(
       "Game finished. Moves played: %d, Final value: %d", moves_played,
-      game.history[0].final_value);
+      history[0].final_value);
 }
 
-void update_root(Game& game, int action) {
+// Legacy wrapper function
+void self_play(Game& game, int game_id) {
+  game.selfPlay(game_id);
+}
+
+void Game::updateRoot(int action) {
   // Update root node to the selected child
-  game.root->getChildNode(action);  // to make sure the child node exists
-  std::unique_ptr<Node> chosen_child =
-      std::move(game.root->child_nodes[action]);
-  game.root = std::move(chosen_child);
-  game.root->parent = nullptr;  // Reset parent to null
+  root->getChildNode(action);  // to make sure the child node exists
+  std::unique_ptr<Node> chosen_child = std::move(root->child_nodes[action]);
+  root = std::move(chosen_child);
+  root->parent = nullptr;  // Reset parent to null
 }
 
+// Legacy wrapper function
+void update_root(Game& game, int action) {
+  game.updateRoot(action);
+}
+
+void Game::saveGameState() {
+  history.emplace_back();
+  history.back().board_tensor = chess::board_to_tensor(root->board);
+  history.back().legal_mask = root->legal_mask;
+  history.back().policy = root->policy;
+  history.back().value = root->value;
+  history.back().child_visit_counts = root->child_visits;
+}
+
+// Legacy wrapper function
 void save_game_state(Game& game) {
-  game.history.emplace_back();
-  game.history.back().board_tensor = chess::board_to_tensor(game.root->board);
-  game.history.back().legal_mask = game.root->legal_mask;
-  game.history.back().policy = game.root->policy;
-  game.history.back().value = game.root->value;
-  game.history.back().child_visit_counts = game.root->child_visits;
+  game.saveGameState();
 }
 
-void update_game_history(Game& game) {
-  auto result = game.root->board.isGameOver();
-  chess::Color side_to_move = game.root->board.sideToMove();
+void Game::updateGameHistory() {
+  auto result = root->board.isGameOver();
+  chess::Color side_to_move = root->board.sideToMove();
   bool is_draw = result.second == chess::GameResult::DRAW ||
                  result.second == chess::GameResult::NONE;
   bool is_white_won = side_to_move == chess::Color::BLACK;
   int final_value = is_draw        ? 0    // Draw
                     : is_white_won ? 1    // White won, Black lost
                                    : -1;  // Black lost, White won
-  for (size_t i = 0; i < game.history.size(); ++i) {
-    game.history[i].final_value = final_value;
+  for (size_t i = 0; i < history.size(); ++i) {
+    history[i].final_value = final_value;
     final_value = -final_value;  // Reverse for the other side
   }
 }
 
-int select_move(Game& game) {
+// Legacy wrapper function
+void update_game_history(Game& game) {
+  game.updateGameHistory();
+}
+
+int Game::selectMove() {
   // MCTS move selection process
 
   // Runs N number of simulations to select a move to play
@@ -113,7 +132,7 @@ int select_move(Game& game) {
   // Store fibers so we can join them later
   std::vector<boost::fibers::fiber> fibers;
   for (int i = 0; i < g_config.num_simulations; ++i) {
-    fibers.emplace_back([&game]() { run_simulation(game); });
+    fibers.emplace_back([this]() { runSimulation(); });
   }
   // Join all fibers
   for (auto& fiber : fibers) {
@@ -121,26 +140,31 @@ int select_move(Game& game) {
   }
 
   // Sample an action based on visit counts
-  std::discrete_distribution<int> dist(game.root->child_visits.begin(),
-                                       game.root->child_visits.end());
+  std::discrete_distribution<int> dist(root->child_visits.begin(),
+                                       root->child_visits.end());
   int action = dist(g_rng);
 
-  CHECK(game.root->legal_mask[action]) << "Illegal move selected: " << action;
+  CHECK(root->legal_mask[action]) << "Illegal move selected: " << action;
   return action;
+}
+
+// Legacy wrapper function
+int select_move(Game& game) {
+  return game.selectMove();
 }
 
 // Run MCTS simulation
 // Finds a node that is as yet unevaluated and evaluates it,
 // And then backpropagates the result.
-void run_simulation(Game& game) {
-  Node* current_node = game.root.get();
+void Game::runSimulation() {
+  Node* current_node = root.get();
 
   // walk down to unevaluated node
   while (true) {
     std::unique_lock<mutex> lock(current_node->is_processing_mutex);
     if (!current_node->is_evaluated) break;
     if (current_node->is_leaf) break;
-    int selected_action = select_action(*current_node);
+    int selected_action = current_node->selectAction();
     CHECK(selected_action != -1 && current_node->legal_mask[selected_action])
         << "Illegal action selected: " << selected_action
         << " at node: " << current_node->move_history << " with board:\n"
@@ -152,10 +176,10 @@ void run_simulation(Game& game) {
   // we could reach an unevaluated node
   // or a leaf node, even if it is already evaluated
   if (current_node->is_leaf) {
-    evaluate_leaf_node(*current_node);
+    current_node->evaluateLeafNode();
   }
   if (!current_node->is_evaluated) {
-    evaluate(*current_node);
+    current_node->evaluate();
   }
 
   // backpropagate the result
@@ -169,32 +193,39 @@ void run_simulation(Game& game) {
   }
 }
 
-int select_action(Node& node) {
-  CHECK(!node.is_leaf) << "Cannot select action on leaf node: "
-                       << node.move_history;
+// Legacy wrapper function
+void run_simulation(Game& game) {
+  game.runSimulation();
+}
+
+int Node::selectAction() {
+  CHECK(!is_leaf) << "Cannot select action on leaf node: " << move_history;
   // current node visit count = sum of child visit counts + 1
   float node_visits =
-      std::accumulate(node.child_visits.begin(), node.child_visits.end(), 0) +
-      1;
+      std::accumulate(child_visits.begin(), child_visits.end(), 0) + 1;
 
   // for all moves we will calculate a score
   std::array<float, kNumActions> score = {};
   for (int i = 0; i < kNumActions; i++) {
     // Q -> avg evaluation
-    float child_value = (node.child_visits[i] == 0)
+    float child_value = (child_visits[i] == 0)
                             ? 0
-                            : node.child_values[i] / node.child_visits[i];
+                            : child_values[i] / child_visits[i];
     // P -> prior probability
-    float prior_probability = node.policy[i];
+    float prior_probability = policy[i];
     // Exploration term
-    float exploration_value =
-        std::sqrt(node_visits) / (node.child_visits[i] + 1);
+    float exploration_value = std::sqrt(node_visits) / (child_visits[i] + 1);
     score[i] = child_value + c_puct * prior_probability * exploration_value;
-    score[i] *= node.legal_mask[i];
+    score[i] *= legal_mask[i];
   }
   std::discrete_distribution<int> dist(score.begin(), score.end());
   int action = dist(g_rng);
   return action;
+}
+
+// Legacy wrapper function
+int select_action(Node& node) {
+  return node.selectAction();
 }
 
 // -----------------------------------------------------------
@@ -258,11 +289,11 @@ static void write_bin(std::ofstream& out, const std::array<T, N>& a) {
   out.write(reinterpret_cast<const char*>(a.data()), sizeof(T) * N);
 }
 
-void append_to_training_file(const Game& game) {
+void Game::appendToTrainingFile() const {
   std::ofstream out(g_config.training_file, std::ios::binary | std::ios::app);
   if (!out) throw std::runtime_error("open failed: " + g_config.training_file);
 
-  for (const auto& s : game.history) {
+  for (const auto& s : history) {
     write_bin(out, s.board_tensor);
     write_bin(out, s.legal_mask);
     write_bin(out, s.policy);
@@ -272,34 +303,50 @@ void append_to_training_file(const Game& game) {
   }
 }
 
+// Legacy wrapper function
+void append_to_training_file(const Game& game) {
+  game.appendToTrainingFile();
+}
+
 // -----------------------------------------------------------
 
-void evaluate(Node& node) {
+// Node class method implementations
+void Node::evaluate() {
   // Ensure no other fibers are processing this node
-  std::unique_lock<mutex> lock(node.is_processing_mutex);
+  std::unique_lock<mutex> lock(is_processing_mutex);
 
   // Create a promise and future pair
   promise<void> promise;
   future<void> future = promise.get_future();
 
   // Send the node to the channel
-  g_evaluation_queue->push(std::make_pair(&node, std::move(promise)));
+  g_evaluation_queue->push(std::make_pair(this, std::move(promise)));
 
   // Wait for evaluation to complete
   future.get();
 }
 
-void evaluate_leaf_node(Node& node) {
+// Legacy wrapper function
+void evaluate(Node& node) {
+  node.evaluate();
+}
+
+void Node::evaluateLeafNode() {
   // Doesn't need the neural net.
   // If we're checkmated value is -1.
-  node.is_evaluated = true;
-  auto result = node.board.isGameOver();
+  is_evaluated = true;
+  auto result = board.isGameOver();
   if (result.first == chess::GameResultReason::CHECKMATE) {
-    node.value = -1;
+    value = -1;
   } else {
-    node.value = 0;
+    value = 0;
   }
-  // node.policy doesn't need to be set, all 0 is ok
+  // policy doesn't need to be set, all 0 is ok
+}
+
+// Legacy wrapper function
+void evaluate_leaf_node(Node& node) {
+  node.evaluateLeafNode();
 }
 
 // -----------------------------------------------------------
