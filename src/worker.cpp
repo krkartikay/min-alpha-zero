@@ -235,6 +235,11 @@ Game::Game() {
   root = std::make_unique<Node>();
 }
 
+Game::Game(const std::string& fen) {
+  // Initialize the root node with custom FEN
+  root = std::make_unique<Node>(fen);
+}
+
 Node::Node(const chess::Board& board) : board(board) {
   // also sets legal mask and is_leaf flag
   chess::Movelist movelist;
@@ -246,6 +251,9 @@ Node::Node(const chess::Board& board) : board(board) {
     int move_idx = move_to_int(move);
     legal_mask[move_idx] = true;
   }
+}
+
+Node::Node(const std::string& fen) : Node(chess::Board(fen)) {
 }
 
 Node* Node::getChildNode(int move_idx) {

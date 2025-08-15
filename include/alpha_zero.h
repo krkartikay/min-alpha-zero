@@ -90,6 +90,7 @@ class Node {
   Node* getChildNode(int move_idx);
   // Constructor, sets legal_mask and is_leaf
   Node(const chess::Board& board = chess::Board());
+  Node(const std::string& fen);
   // No copy or move
   Node(const Node&) = delete;
   Node& operator=(const Node&) = delete;
@@ -125,6 +126,7 @@ class GameState {
 class Game {
  public:
   Game();
+  Game(const std::string& fen);
   
   // Methods that were previously free functions
   void selfPlay(int game_id);

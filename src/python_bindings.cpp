@@ -41,6 +41,7 @@ PYBIND11_MODULE(min_alpha_zero, m) {
     // Node class
     py::class_<alphazero::Node>(m, "Node")
         .def(py::init<const chess::Board&>(), py::arg("board") = chess::Board())
+        .def(py::init<const std::string&>(), py::arg("fen"))
         .def_readonly("board", &alphazero::Node::board)
         .def_readonly("is_evaluated", &alphazero::Node::is_evaluated)
         .def_readonly("is_leaf", &alphazero::Node::is_leaf)
@@ -85,6 +86,7 @@ PYBIND11_MODULE(min_alpha_zero, m) {
     // Game class
     py::class_<alphazero::Game>(m, "Game")
         .def(py::init<>())
+        .def(py::init<const std::string&>(), py::arg("fen"))
         .def("self_play", &alphazero::Game::selfPlay)
         .def("update_root", &alphazero::Game::updateRoot)
         .def("save_game_state", &alphazero::Game::saveGameState)
