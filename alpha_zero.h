@@ -6,6 +6,9 @@
 #include <absl/time/time.h>
 
 #include <algorithm>
+#include <random>
+#include <string>
+#include <vector>
 #include <boost/fiber/all.hpp>
 #include <chess.hpp>
 #include <chess_utils.hpp>
@@ -138,6 +141,43 @@ void process_batch(std::vector<eval_request_t> nodes);
 void run_worker();
 void evaluate(Node& node);
 void evaluate_leaf_node(Node& node);
+
+// Agents -----------------------------------------------------
+
+class ChessAgent {
+ public:
+  virtual ~ChessAgent() = default;
+  virtual int select_action(Game& game) = 0;
+  virtual std::string name() const = 0;
+};
+
+class RandomAgent : public ChessAgent {
+ public:
+  RandomAgent();
+  int select_action(Game& game) override;
+  std::string name() const override;
+
+ private:
+  mutable std::mt19937 rng;
+};
+
+class MCTSAgent : public ChessAgent {
+ public:
+  MCTSAgent();
+  int select_action(Game& game) override;
+  std::string name() const override;
+};
+
+struct GameResult {
+  int moves_played;
+  int agent_wins;
+  int draws;
+  int other_wins;
+};
+
+GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other,
+                               int game_num);
+void run_agent_tournament();
 
 // Logging and Debugging ---------------------------------
 
