@@ -205,7 +205,7 @@ def update_dashboard(record_index):
         policy_heatmap_data[x][y] = value
 
     policy_fig = go.Figure(
-        data=go.Heatmap(z=policy_heatmap_data, colorscale="Blues", showscale=False)
+        data=go.Heatmap(z=policy_heatmap_data, colorscale="viridis", showscale=False)
     )
     policy_fig.update_layout(
         # title="Policy Heatmap",
@@ -229,7 +229,9 @@ def update_dashboard(record_index):
         legal_moves_heatmap_data[x][y] = int(value)
 
     legal_moves_fig = go.Figure(
-        data=go.Heatmap(z=legal_moves_heatmap_data, colorscale="Blues", showscale=False)
+        data=go.Heatmap(
+            z=legal_moves_heatmap_data, colorscale="viridis", showscale=False
+        )
     )
     legal_moves_fig.update_layout(
         # title="Legal Moves Heatmap",
@@ -267,7 +269,7 @@ def update_dashboard(record_index):
 
     child_visit_counts_fig = go.Figure(
         data=go.Heatmap(
-            z=child_visit_counts_heatmap_data, colorscale="Blues", showscale=False
+            z=child_visit_counts_heatmap_data, colorscale="viridis", showscale=False
         )
     )
     child_visit_counts_fig.update_layout(
@@ -293,7 +295,7 @@ def update_dashboard(record_index):
 
     masked_policy_fig = go.Figure(
         data=go.Heatmap(
-            z=masked_policy_heatmap_data, colorscale="Blues", showscale=False
+            z=masked_policy_heatmap_data, colorscale="viridis", showscale=False
         )
     )
     masked_policy_fig.update_layout(
