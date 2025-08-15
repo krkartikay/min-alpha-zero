@@ -50,7 +50,31 @@ PYBIND11_MODULE(min_alpha_zero, m) {
         .def("select_action", &alphazero::Node::selectAction)
         .def("evaluate", &alphazero::Node::evaluate)
         .def("evaluate_leaf_node", &alphazero::Node::evaluateLeafNode)
-        .def("get_child_node", &alphazero::Node::getChildNode, py::return_value_policy::reference);
+        .def("get_child_node", &alphazero::Node::getChildNode, py::return_value_policy::reference)
+        .def_property_readonly("child_visits", [](const alphazero::Node &n) {
+            return py::array_t<int>(
+                {alphazero::kNumActions}, 
+                {sizeof(int)}, 
+                n.child_visits.data(), 
+                py::cast(n)
+            );
+        })
+        .def_property_readonly("child_values", [](const alphazero::Node &n) {
+            return py::array_t<float>(
+                {alphazero::kNumActions}, 
+                {sizeof(float)}, 
+                n.child_values.data(), 
+                py::cast(n)
+            );
+        })
+        .def_property_readonly("legal_mask", [](const alphazero::Node &n) {
+            return py::array_t<bool>(
+                {alphazero::kNumActions}, 
+                {sizeof(bool)}, 
+                n.legal_mask.data(), 
+                py::cast(n)
+            );
+        });
 
     // GameState class
     py::class_<alphazero::GameState>(m, "GameState")
@@ -67,7 +91,10 @@ PYBIND11_MODULE(min_alpha_zero, m) {
         .def("update_game_history", &alphazero::Game::updateGameHistory)
         .def("select_move", &alphazero::Game::selectMove)
         .def("run_simulation", &alphazero::Game::runSimulation)
-        .def("append_to_training_file", &alphazero::Game::appendToTrainingFile);
+        .def("append_to_training_file", &alphazero::Game::appendToTrainingFile)
+        .def("get_root", [](alphazero::Game &g) -> alphazero::Node* {
+            return g.root.get();
+        }, py::return_value_policy::reference);
 
     // ChessAgent base class
     py::class_<alphazero::ChessAgent>(m, "ChessAgent")
@@ -104,6 +131,31 @@ PYBIND11_MODULE(min_alpha_zero, m) {
           py::arg("game"), py::arg("g") = 0, py::arg("m") = 0, py::arg("chosen_action") = -1);
     m.def("board_to_string", &alphazero::board_to_string);
     m.def("timestamp", &alphazero::timestamp);
+    
+    // Add init_globals function
+    m.def("init_globals", []() {
+        alphazero::g_config.eval_timeout = alphazero::duration_t(1);
+        alphazero::g_evaluation_queue = std::make_unique<alphazero::eval_channel_t>(alphazero::g_config.channel_size);
+    });
+    
+    // Global evaluator thread management
+    static std::unique_ptr<std::thread> g_evaluator_thread;
+    
+    // Start evaluator thread
+    m.def("start_evaluator_thread", []() {
+        if (!g_evaluator_thread) {
+            g_evaluator_thread = std::make_unique<std::thread>(alphazero::run_evaluator);
+        }
+    });
+    
+    // Stop evaluator for clean shutdown
+    m.def("stop_evaluator", []() {
+        alphazero::g_stop_evaluator = true;
+        if (g_evaluator_thread && g_evaluator_thread->joinable()) {
+            g_evaluator_thread->join();
+            g_evaluator_thread.reset();
+        }
+    });
 
     // Functions from chess_utils.hpp
     m.def("board_to_tensor", &chess::board_to_tensor);
