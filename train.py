@@ -46,7 +46,7 @@ def main():
     # Hyperparameters
     batch_size = 32
     lr = 1e-3
-    epochs = 5
+    epochs = 20
 
     # Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

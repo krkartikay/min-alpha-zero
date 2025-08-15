@@ -31,6 +31,8 @@ env/
 *.xlsx
 *.log
 *.txt
+*.png
+*.svg
 
 # Model files
 *.pth

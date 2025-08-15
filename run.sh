@@ -16,7 +16,7 @@ done
 
 # Step 0: Delete specific files if they exist
 rm -rf out/*
-rm -f training_data.bin alpha_zero.log model_eval.log
+rm -f training_data.bin alpha_zero.log model_eval.log training.log
 
 # Step 1: Create a starting model
 python model.py
