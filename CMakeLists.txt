@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.20)
 project(min_alpha_zero LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic")
 
@@ -12,7 +12,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 # Required Libraries
 find_package(Torch REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system fiber context)
-find_package(absl REQUIRED)
+find_package(absl CONFIG REQUIRED)
 find_package(GTest REQUIRED)
 
 # Include dirs
@@ -39,9 +39,10 @@ set(ABSL_LIBS
   absl::flags
   absl::flags_parse
   absl::log
-  "$<LINK_LIBRARY:WHOLE_ARCHIVE,absl::log_flags>"
+  # "$<LINK_LIBRARY:WHOLE_ARCHIVE,absl::log_flags>"
   absl::log_initialize
   absl::log_globals
+  absl::log_flags
 )
 
 # Main binary

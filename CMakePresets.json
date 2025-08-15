@@ -43,7 +43,7 @@
   ],
   "buildPresets": [
     {
-      "name": "default",
+      "name": "build",
       "configurePreset": "build"
     },
     {
