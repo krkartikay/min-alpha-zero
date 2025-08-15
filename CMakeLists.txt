@@ -26,6 +26,7 @@ include_directories(
 # Main source files (excluding test)
 set(SOURCES
   alpha_zero.h
+  agents.cpp
   evaluator.cpp
   worker.cpp
   logging.cpp
