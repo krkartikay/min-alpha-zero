@@ -76,6 +76,14 @@ PYBIND11_MODULE(min_alpha_zero, m) {
                 n.legal_mask.data(), 
                 py::cast(n)
             );
+        })
+        .def_property_readonly("policy", [](const alphazero::Node &n) {
+            return py::array_t<float>(
+                {alphazero::kNumActions}, 
+                {sizeof(float)}, 
+                n.policy.data(), 
+                py::cast(n)
+            );
         });
 
     // GameState class
