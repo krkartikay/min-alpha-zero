@@ -48,29 +48,7 @@ set(ABSL_LIBS
   absl::log_flags
 )
 
-# Main binary
-add_executable(alpha_zero src/main.cpp ${SOURCES})
-
-target_link_libraries(alpha_zero
-  ${ABSL_LIBS}
-  ${TORCH_LIBRARIES}
-  ${Boost_LIBRARIES}
-)
-
-add_executable(test_board src/test_board.cpp ${SOURCES})
-target_link_libraries(test_board
-  ${ABSL_LIBS}
-  ${TORCH_LIBRARIES}
-  ${Boost_LIBRARIES}
-)
-
-add_executable(model_eval src/model_eval.cpp ${SOURCES})
-
-target_link_libraries(model_eval
-  ${ABSL_LIBS}
-  ${TORCH_LIBRARIES}
-  ${Boost_LIBRARIES}
-)
+# Removed C++ executables - now using Python scripts in scripts/
 
 # Test executable
 add_executable(test_all test/test_all.cpp ${SOURCES})
