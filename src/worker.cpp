@@ -72,10 +72,6 @@ void Game::selfPlay(int game_id) {
       history[0].final_value);
 }
 
-// Legacy wrapper function
-void self_play(Game& game, int game_id) {
-  game.selfPlay(game_id);
-}
 
 void Game::updateRoot(int action) {
   // Update root node to the selected child
@@ -85,10 +81,6 @@ void Game::updateRoot(int action) {
   root->parent = nullptr;  // Reset parent to null
 }
 
-// Legacy wrapper function
-void update_root(Game& game, int action) {
-  game.updateRoot(action);
-}
 
 void Game::saveGameState() {
   history.emplace_back();
@@ -99,10 +91,6 @@ void Game::saveGameState() {
   history.back().child_visit_counts = root->child_visits;
 }
 
-// Legacy wrapper function
-void save_game_state(Game& game) {
-  game.saveGameState();
-}
 
 void Game::updateGameHistory() {
   auto result = root->board.isGameOver();
@@ -119,10 +107,6 @@ void Game::updateGameHistory() {
   }
 }
 
-// Legacy wrapper function
-void update_game_history(Game& game) {
-  game.updateGameHistory();
-}
 
 int Game::selectMove() {
   // MCTS move selection process
@@ -148,10 +132,6 @@ int Game::selectMove() {
   return action;
 }
 
-// Legacy wrapper function
-int select_move(Game& game) {
-  return game.selectMove();
-}
 
 // Run MCTS simulation
 // Finds a node that is as yet unevaluated and evaluates it,
@@ -193,10 +173,6 @@ void Game::runSimulation() {
   }
 }
 
-// Legacy wrapper function
-void run_simulation(Game& game) {
-  game.runSimulation();
-}
 
 int Node::selectAction() {
   CHECK(!is_leaf) << "Cannot select action on leaf node: " << move_history;
@@ -223,10 +199,6 @@ int Node::selectAction() {
   return action;
 }
 
-// Legacy wrapper function
-int select_action(Node& node) {
-  return node.selectAction();
-}
 
 // -----------------------------------------------------------
 
@@ -311,10 +283,6 @@ void Game::appendToTrainingFile() const {
   }
 }
 
-// Legacy wrapper function
-void append_to_training_file(const Game& game) {
-  game.appendToTrainingFile();
-}
 
 // -----------------------------------------------------------
 
@@ -334,10 +302,6 @@ void Node::evaluate() {
   future.get();
 }
 
-// Legacy wrapper function
-void evaluate(Node& node) {
-  node.evaluate();
-}
 
 void Node::evaluateLeafNode() {
   // Doesn't need the neural net.
@@ -352,10 +316,6 @@ void Node::evaluateLeafNode() {
   // policy doesn't need to be set, all 0 is ok
 }
 
-// Legacy wrapper function
-void evaluate_leaf_node(Node& node) {
-  node.evaluateLeafNode();
-}
 
 // -----------------------------------------------------------
 

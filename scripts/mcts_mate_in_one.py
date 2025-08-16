@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import min_alpha_zero as maz
 
 def print_game_tree(node, depth=0, max_depth=3, action=-1):
@@ -24,10 +20,26 @@ def print_game_tree(node, depth=0, max_depth=3, action=-1):
                 if child:
                     print_game_tree(child, depth + 1, max_depth, i)
 
+def run_single_test(num_simulations, mate_action):
+    """Run a single MCTS test and return whether mate move was selected and its probability"""
+    game = maz.Game("rnbqkb1r/pppp1ppp/5n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 2 4")
+    
+    for _ in range(num_simulations):
+        game.run_simulation()
+    
+    root = game.get_root()
+    visits = root.child_visits
+    total_visits = sum(visits)
+    mate_visits = visits[mate_action]
+    mate_probability = mate_visits / total_visits if total_visits > 0 else 0.0
+    
+    best_move = game.select_move()
+    return mate_action == best_move, mate_probability
+
 def main():
     config = maz.get_config()
     config.channel_size = 16
-    config.num_simulations = 200  # More simulations for mate-in-one
+    config.num_simulations = 1000  # More simulations for mate-in-one
     config.batch_size = 10
     config.model_path = "model.pt"
     config.debug = False
@@ -44,56 +56,26 @@ def main():
     # Scholar's mate position - White to move and mate in one
     # Position after: 1.e4 e5 2.Bc4 Nc6 3.Qh5 Nf6?? 4.Qxf7# (mate)
     fen = "rnbqkb1r/pppp1ppp/5n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 2 4"
+    mate_action = 39 * 64 + 53  # h5 = 39, f7 = 53
     
-    print(f"Creating game from mate-in-one position...")
     print(f"FEN: {fen}")
+    print(f"Mate move h5->f7 (action {mate_action})")
     
-    # Create a game from FEN string
-    game = maz.Game(fen)
-    root = game.get_root()
+    # Run multiple tests
+    num_tests = 10
+    successes = 0
     
-    print(f"Initial board:\n{maz.board_to_string(root.board)}")
+    print(f"\nRunning {num_tests} tests with {config.num_simulations} simulations each...")
     
-    # Check legal moves and if mate move is legal
-    legal_mask = root.legal_mask
-    mate_action = 39 * 64 + 53  # h5 = 39, f7 = 53
-    print(f"\nMate move h5->f7 (action {mate_action}) is legal: {legal_mask[mate_action]}")
+    for test_num in range(1, num_tests + 1):
+        success, probability = run_single_test(config.num_simulations, mate_action)
+        successes += success
+        status = "SUCCESS" if success else "FAILED"
+        print(f"Test {test_num}: {status} (mate move probability: {probability:.3f})")
     
-    # Print some legal moves for reference
-    legal_actions = [i for i in range(len(legal_mask)) if legal_mask[i]]
-    print(f"Total legal moves: {len(legal_actions)}")
-    print("First 10 legal actions:", legal_actions[:10])
-    if mate_action in legal_actions:
-        print(f"Mate action {mate_action} is in legal actions at index {legal_actions.index(mate_action)}")
-    
-    print(f"\nRunning {config.num_simulations} MCTS simulations...")
-    for _ in range(config.num_simulations):
-        game.run_simulation()
-    
-    print("\nMCTS tree structure:")
-    print_game_tree(root)
-    
-    best_move = game.select_move()
-    print(f"\nBest move selected: {best_move}")
-    
-    print("\nChild visit counts (top 10):")
-    visits = root.child_visits
-    visit_pairs = [(i, visits[i]) for i in range(maz.NUM_ACTIONS) if visits[i] > 0]
-    visit_pairs.sort(key=lambda x: x[1], reverse=True)
-    for action, visit_count in visit_pairs[:10]:
-        from_sq = action // 64
-        to_sq = action % 64
-        print(f"  Move {from_sq}->{to_sq}: {visit_count} visits")
-    
-    # Check if MCTS found the mate move (h5f7, which is 39*64 + 53 = 2549)
-    mate_action = 39 * 64 + 53  # h5 = 39, f7 = 53
-    mate_visits = visits[mate_action]
-    print(f"\nMate move h5->f7 (action {mate_action}): {mate_visits} visits")
-    
-    if mate_action == best_move:
-        print("SUCCESS: MCTS found the mate in one!")
-    else:
-        print("MCTS did not select the mate move as best")
+    success_rate = successes / num_tests
+    print(f"\nResults: {successes}/{num_tests} tests found the mate move")
+    print(f"Success rate: {success_rate:.1%}")
     
     print("\nStopping evaluator for clean shutdown...")
     maz.stop_evaluator()
