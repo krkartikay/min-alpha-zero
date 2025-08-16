@@ -123,9 +123,17 @@ int Game::selectMove() {
     fiber.join();
   }
 
-  // Sample an action based on visit counts
-  std::discrete_distribution<int> dist(root->child_visits.begin(),
-                                       root->child_visits.end());
+  // Apply temperature to visit counts and sample an action
+  std::array<float, kNumActions> tempered_visits;
+  for (int i = 0; i < kNumActions; ++i) {
+    if (g_config.temperature == 0.0f) {
+      // At temperature 0, select the most visited move deterministically
+      tempered_visits[i] = (root->child_visits[i] == *std::max_element(root->child_visits.begin(), root->child_visits.end())) ? 1.0f : 0.0f;
+    } else {
+      tempered_visits[i] = std::pow(root->child_visits[i], 1.0f / g_config.temperature);
+    }
+  }
+  std::discrete_distribution<int> dist(tempered_visits.begin(), tempered_visits.end());
   int action = dist(g_rng);
 
   CHECK(root->legal_mask[action]) << "Illegal move selected: " << action;

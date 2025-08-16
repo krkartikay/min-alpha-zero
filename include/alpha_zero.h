@@ -60,6 +60,7 @@ class Config {
   std::string model_path;
   std::string training_file;
   bool debug = false;
+  float temperature = 1.0;
 };
 
 inline Config g_config;

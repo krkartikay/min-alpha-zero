@@ -24,8 +24,8 @@ def run_single_test(num_simulations, mate_action):
     """Run a single MCTS test and return whether mate move was selected and its probability"""
     game = maz.Game("rnbqkb1r/pppp1ppp/5n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 2 4")
     
-    for _ in range(num_simulations):
-        game.run_simulation()
+    # select_move() already runs num_simulations internally
+    best_move = game.select_move()
     
     root = game.get_root()
     visits = root.child_visits
@@ -33,16 +33,18 @@ def run_single_test(num_simulations, mate_action):
     mate_visits = visits[mate_action]
     mate_probability = mate_visits / total_visits if total_visits > 0 else 0.0
     
-    best_move = game.select_move()
     return mate_action == best_move, mate_probability
 
 def main():
     config = maz.get_config()
     config.channel_size = 16
-    config.num_simulations = 1000  # More simulations for mate-in-one
+    config.num_simulations = 100
     config.batch_size = 10
     config.model_path = "model.pt"
     config.debug = False
+    config.temperature = 0.1
+    
+    num_tests = 100
     
     print("Initializing globals...")
     maz.init_globals()
@@ -62,7 +64,6 @@ def main():
     print(f"Mate move h5->f7 (action {mate_action})")
     
     # Run multiple tests
-    num_tests = 10
     successes = 0
     
     print(f"\nRunning {num_tests} tests with {config.num_simulations} simulations each...")

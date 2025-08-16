@@ -36,7 +36,8 @@ PYBIND11_MODULE(min_alpha_zero, m) {
         .def_readwrite("num_threads", &alphazero::Config::num_threads)
         .def_readwrite("model_path", &alphazero::Config::model_path)
         .def_readwrite("training_file", &alphazero::Config::training_file)
-        .def_readwrite("debug", &alphazero::Config::debug);
+        .def_readwrite("debug", &alphazero::Config::debug)
+        .def_readwrite("temperature", &alphazero::Config::temperature);
 
     // Node class
     py::class_<alphazero::Node>(m, "Node")
