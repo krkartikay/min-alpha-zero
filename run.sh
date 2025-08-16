@@ -19,7 +19,7 @@ rm -rf out/*
 rm -f training_data.bin alpha_zero.log model_eval.log training.log
 
 # Step 1: Create a starting model
-python model.py
+python scripts/model.py
 
 # Step 2: Run baseline evaluation
 ./build/model_eval
@@ -30,7 +30,7 @@ for ((i=1; i<=N; i++)); do
     ./build/alpha_zero --num_games="$X"
 
     # Step 3b: Train the model
-    python train.py
+    python scripts/train.py
 
     # Step 3c: Copy the latest model to model.pt
     latest_model=$(ls out/model_*.pt | sort -V | tail -n 1)

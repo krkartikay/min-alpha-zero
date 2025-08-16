@@ -27,13 +27,13 @@ cmake --build build --parallel
 
 ```
 ./run.sh [--num_iterations=N] [--num_games=X]  # Full training loop
-python model.py                                # Create initial model
-python train.py                                # Train on existing data
+python scripts/model.py                        # Create initial model
+python scripts/train.py                        # Train on existing data
 python -c "import min_alpha_zero; ..."         # Python bindings
 ```
 
 - `run.sh`: Orchestrates model→self-play→training→evaluation cycle
-- Training data: binary format in `training_data.bin` (see dataset.py:8-15)
+- Training data: binary format in `training_data.bin` (see scripts/dataset.py:8-15)
 - Models: TorchScript `.pt` files, versioned in `out/model_NNN.pt`
 
 ## Architecture
@@ -82,15 +82,22 @@ src/
 ├── python_bindings.cpp # pybind11 module "min_alpha_zero"
 └── model_eval.cpp    # Standalone model evaluation
 
-test/
-├── test_all.cpp      # GTest suite for core functionality
-├── mate_in_one.py    # Chess puzzle visualization
-└── *.png/*.svg       # Generated visualizations
-
-dashboards/
-├── explore_data.py   # Training data analysis
-├── logs.py          # Log file parsing/visualization
-└── requirements.txt  # matplotlib, pandas
+scripts/
+├── __init__.py       # Python package marker
+├── dataset.py        # Training data utilities
+├── model.py          # Neural network model creation
+├── train.py          # Model training script
+├── mcts_demo.py      # MCTS demonstration
+├── mcts_mate_in_one.py # MCTS puzzle solver
+├── dashboards/       # Data analysis and visualization
+│   ├── __init__.py
+│   ├── explore_data.py # Training data analysis
+│   ├── logs.py       # Log file parsing/visualization
+│   └── requirements.txt # matplotlib, pandas
+└── test/            # Python tests and visualizations
+    ├── __init__.py
+    ├── mate_in_one.py # Chess puzzle visualization
+    └── *.png/*.svg    # Generated visualizations
 
 External: abseil-cpp/, pybind11/ (git submodules)
 ```
@@ -98,9 +105,9 @@ External: abseil-cpp/, pybind11/ (git submodules)
 ## Testing
 
 ```
-./build/test_all                    # Run all C++ tests
-python test/mate_in_one.py          # Chess puzzle test
-python dashboards/explore_data.py   # Data analysis
+./build/test_all                          # Run all C++ tests
+python scripts/test/mate_in_one.py        # Chess puzzle test
+python scripts/dashboards/explore_data.py # Data analysis
 ```
 
 No lint commands configured. Tests validate Node construction, MCTS operations, move encoding, and game mechanics.
