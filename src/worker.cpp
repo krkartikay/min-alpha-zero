@@ -40,6 +40,7 @@ void Game::selfPlay(int game_id) {
   // Keep going while the game is not over
   bool is_game_over = false;
   int moves_played = 0;
+  move_list.clear();
   while (!is_game_over && moves_played < 100) {
     // Select move by running N simulations
     int action = selectMove();
@@ -51,6 +52,7 @@ void Game::selfPlay(int game_id) {
     VLOG(1) << absl::StrFormat(
         "(Game %d) Move played: %s", game_id,
         chess::uci::moveToSan(root->board, int_to_move(action, root->board)));
+    move_list.push_back(chess::uci::moveToSan(root->board, int_to_move(action, root->board)));
     if (g_config.debug) {
       dump_game_tree_to_file(*this, game_id, moves_played, action);
     }
@@ -67,6 +69,7 @@ void Game::selfPlay(int game_id) {
   // At the end of the game note final winner and write to training file.
   updateGameHistory();
   appendToTrainingFile();
+  writeGameToLog(game_id);
   LOG(INFO) << absl::StrFormat(
       "Game finished. Moves played: %d, Final value: %d", moves_played,
       history[0].final_value);
@@ -289,6 +292,46 @@ void Game::appendToTrainingFile() const {
     write_bin(out, s.value);
     write_bin(out, s.final_value);
   }
+}
+
+
+void Game::writeGameToLog(int game_id) const {
+  std::ofstream out("selfplay_games.log", std::ios::app);
+  if (!out) throw std::runtime_error("open failed: selfplay_games.log");
+  
+  // Determine game result from final_value
+  std::string result;
+  int final_value = history.empty() ? 0 : history[0].final_value;
+  bool game_incomplete = move_list.size() >= 100;  // Hit move limit
+  
+  if (game_incomplete) {
+    result = "*";
+  } else if (final_value == 1) {
+    result = "1-0";
+  } else if (final_value == -1) {
+    result = "0-1";
+  } else {
+    result = "1/2-1/2";
+  }
+  
+  // Write game header and moves in PGN format
+  out << "Game " << game_id << ": ";
+  for (size_t i = 0; i < move_list.size(); ++i) {
+    if (i % 2 == 0) {
+      // White move - add move number
+      out << (i / 2 + 1) << ". " << move_list[i];
+      if (i + 1 < move_list.size()) {
+        out << " ";
+      }
+    } else {
+      // Black move
+      out << move_list[i];
+      if (i + 1 < move_list.size()) {
+        out << " ";
+      }
+    }
+  }
+  out << " " << result << std::endl;
 }
 
 

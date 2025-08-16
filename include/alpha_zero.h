@@ -137,9 +137,11 @@ class Game {
   int selectMove();
   void runSimulation();
   void appendToTrainingFile() const;
+  void writeGameToLog(int game_id) const;
   
   std::unique_ptr<Node> root;
   std::vector<GameState> history;
+  std::vector<std::string> move_list;
 };
 
 // Note: Game and Node methods moved to class definitions above

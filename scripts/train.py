@@ -102,6 +102,10 @@ def main():
     save_path = get_next_model_path("out")
     torch.jit.save(model, save_path)
     print(f"Model saved to {save_path}")
+    
+    # Also save as model.pt for next iteration
+    torch.jit.save(model, "model.pt")
+    print("Model also saved to model.pt")
 
 if __name__ == "__main__":
     main()
