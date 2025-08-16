@@ -55,7 +55,8 @@ def main():
     # Hyperparameters
     batch_size = 32
     lr = 3e-4
-    epochs = 20
+    epochs = 5
+    l2_weight = 1e-4  # L2 regularization weight
 
     # Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -67,7 +68,7 @@ def main():
     # Load model
     model = torch.jit.load("model.pt").to(device)
     model.train()
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=l2_weight)
 
     print("Starting training...")
     for epoch in range(epochs):
