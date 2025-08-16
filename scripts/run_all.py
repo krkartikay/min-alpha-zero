@@ -7,16 +7,21 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import min_alpha_zero as maz
 from train import main as train_main
 
+NUM_SIMULATIONS = 1000
+NUM_GAMES_EVAL = 10
+NUM_GAMES_SELFPLAY = 100
+
 
 def setup_config():
     config = maz.get_config()
     config.channel_size = 128
-    config.num_simulations = 200
+    config.num_simulations = NUM_SIMULATIONS
     config.batch_size = 1000
-    config.num_games = 100
+    config.num_games = NUM_GAMES_SELFPLAY
     config.model_path = "model.pt"
     config.training_file = "training_data.bin"
     config.debug = False
+    config.temperature = 1.0
     return config
 
 
@@ -25,16 +30,16 @@ def run_model_eval():
     print("Running Model Evaluation")
     print("=" * 50)
     config = maz.get_config()
-    config.num_games = 10
+    config.num_games = NUM_GAMES_EVAL
     maz.run_agent_tournament()
-    config.num_games = 100
 
 
 def run_self_play():
     print("\n" + "=" * 50)
     print("Running Self-play (100 games)")
     print("=" * 50)
-
+    config = maz.get_config()
+    config.num_games = NUM_GAMES_SELFPLAY
     maz.run_worker()
 
 

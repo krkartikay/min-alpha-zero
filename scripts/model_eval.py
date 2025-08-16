@@ -12,6 +12,7 @@ def main():
     parser.add_argument('--model_path', type=str, default='model.pt', help='Path to the model file')
     parser.add_argument('--training_file', type=str, default='training_data.bin', help='File to store training data')
     parser.add_argument('--debug', action='store_true', help='Enable debug logging and intermediate state dumps')
+    parser.add_argument('--temperature', type=float, default=1.0, help='Temperature parameter for move selection')
     
     args = parser.parse_args()
     
@@ -23,6 +24,7 @@ def main():
     config.model_path = args.model_path
     config.training_file = args.training_file
     config.debug = args.debug
+    config.temperature = args.temperature
     
     print("Starting AlphaZero agent tournament...")
     
