@@ -92,10 +92,8 @@ def main():
                 child_visit_counts.sum(dim=1, keepdim=True) + 1e-8
             )
 
-            # Cross-entropy loss (negative log-likelihood)
-            policy_loss = F.cross_entropy(
-                masked_log_probs, target_policy, reduction="mean"
-            )
+            # Policy loss: KL(target || model) == -sum target * log_probs + const
+            policy_loss = -(masked_log_probs * target_policy).sum(dim=1).mean()
 
             # MSE loss for value prediction
             value_loss = F.mse_loss(value_pred.squeeze(-1), final_value)
