@@ -23,7 +23,7 @@ void run_evaluator() {
 void init_model() {
   g_model = torch::jit::load(g_config.model_path);
   g_model.eval();
-  g_model.to(torch::kCUDA);
+  g_model.to(torch::kMPS);
 }
 
 std::vector<eval_request_t> get_requests_batch() {
@@ -55,7 +55,7 @@ void process_batch(std::vector<eval_request_t> nodes) {
   }
 
   // Move input to CUDA and run the model
-  auto input_cuda = input.to(torch::kCUDA);
+  auto input_cuda = input.to(torch::kMPS);
   auto output = g_model.forward({input_cuda});
 
   // The model output is a tuple of (policy, value) batched tensors
