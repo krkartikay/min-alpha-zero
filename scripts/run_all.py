@@ -24,7 +24,10 @@ def run_model_eval():
     print("\n" + "=" * 50)
     print("Running Model Evaluation")
     print("=" * 50)
+    config = maz.get_config()
+    config.num_games = 10
     maz.run_agent_tournament()
+    config.num_games = 100
 
 
 def run_self_play():

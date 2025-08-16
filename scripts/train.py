@@ -107,10 +107,11 @@ def main():
             optimizer.step()
 
             total_loss += loss.item() * board_tensor.size(0)
-            print(
-                f"Batch {i+1} \t Policy loss: {policy_loss.item():.4f}\t"
-                f"Value loss: {value_loss.item():.4f}\t Total loss: {loss.item():.4f}"
-            )
+            if (i + 1) % 100 == 0:
+                print(
+                    f"Batch {i+1} \t Policy loss: {policy_loss.item():.4f}\t"
+                    f"Value loss: {value_loss.item():.4f}\t Total loss: {loss.item():.4f}"
+                )
 
         avg_loss = total_loss / len(dataset)
         print(f"Epoch {epoch+1}/{epochs} - Avg Loss: {avg_loss:.4f}")
