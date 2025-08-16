@@ -26,15 +26,15 @@ cmake --build build --parallel
 ## Training Pipeline
 
 ```
-./run.sh [--num_iterations=N] [--num_games=X]  # Full training loop
+python scripts/run_all.py                      # Full training loop (infinite iterations)
 python scripts/model.py                        # Create initial model
 python scripts/train.py                        # Train on existing data
 python -c "import min_alpha_zero; ..."         # Python bindings
 ```
 
-- `run.sh`: Orchestrates model→self-play→training→evaluation cycle
+- `scripts/run_all.py`: Orchestrates model→self-play→training→evaluation cycle
 - Training data: binary format in `training_data.bin` (see scripts/dataset.py:8-15)
-- Models: TorchScript `.pt` files, versioned in `out/model_NNN.pt`
+- Models: TorchScript `.pt` files, current model in root as `model.pt`, archived in `out/`
 
 ## Architecture
 
@@ -108,6 +108,18 @@ External: abseil-cpp/, pybind11/ (git submodules)
 ./build/test_all                          # Run all C++ tests
 python scripts/test/mate_in_one.py        # Chess puzzle test
 python scripts/dashboards/explore_data.py # Data analysis
+python scripts/debug_mcts.py              # MCTS debugging utilities
+python scripts/analyze_logits.py          # Model output analysis
+python scripts/print_training_records.py  # Training data inspection
 ```
 
 No lint commands configured. Tests validate Node construction, MCTS operations, move encoding, and game mechanics.
+
+## Development Tools
+
+```
+python scripts/alpha_zero.py              # Core AlphaZero implementation
+python scripts/model_eval.py              # Model evaluation utilities
+python scripts/mcts_demo.py               # MCTS demonstration
+python scripts/mcts_mate_in_one.py        # MCTS puzzle solver
+```

@@ -35,7 +35,7 @@ import numpy as np
 def masked_log_softmax(logits, mask, dim=-1):
     # Set logits to large negative where mask is False
     mask = mask.bool()
-    logits = logits.masked_fill(~mask, float("-inf"))
+    logits = logits.masked_fill(~mask, -1e10)
     return F.log_softmax(logits, dim=dim)
 
 
@@ -85,7 +85,7 @@ def main():
             policy_logits, value_pred = model(board_tensor)
 
             # Masked log softmax
-            log_probs = masked_log_softmax(policy_logits, legal_mask, dim=1)
+            masked_log_probs = masked_log_softmax(policy_logits, legal_mask, dim=1)
 
             # Normalize child_visit_counts to get target policy
             target_policy = child_visit_counts / (
@@ -94,7 +94,7 @@ def main():
 
             # Cross-entropy loss (negative log-likelihood)
             policy_loss = F.cross_entropy(
-                policy_logits, target_policy, reduction="mean"
+                masked_log_probs, target_policy, reduction="mean"
             )
 
             # MSE loss for value prediction
