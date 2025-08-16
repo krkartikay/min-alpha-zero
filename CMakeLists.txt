@@ -12,7 +12,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 # Required Libraries
 find_package(Torch REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system fiber context)
-find_package(GTest REQUIRED)
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_subdirectory(external/abseil-cpp)
@@ -48,18 +47,6 @@ set(ABSL_LIBS
   absl::log_flags
 )
 
-# Removed C++ executables - now using Python scripts in scripts/
-
-# Test executable
-add_executable(test_all test/test_all.cpp ${SOURCES})
-target_link_libraries(test_all
-  ${ABSL_LIBS}
-  ${TORCH_LIBRARIES}
-  ${Boost_LIBRARIES}
-  GTest::gtest
-  GTest::gtest_main
-)
-
 # Python bindings
 pybind11_add_module(min_alpha_zero src/python_bindings.cpp ${SOURCES})
 target_link_libraries(min_alpha_zero PRIVATE
@@ -69,8 +56,7 @@ target_link_libraries(min_alpha_zero PRIVATE
 )
 
 # Install the module to site-packages
-execute_process(COMMAND ${Python_EXECUTABLE} -c "import site; print(site.getsitepackages()[0])" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
-install(TARGETS min_alpha_zero DESTINATION ${PYTHON_SITE_PACKAGES})
+install(TARGETS min_alpha_zero DESTINATION ${Python_SITE_PACKAGES})
 
 # Copy model.pt to build directory
 configure_file(${CMAKE_SOURCE_DIR}/model.pt

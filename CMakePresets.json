@@ -4,14 +4,18 @@
     {
       "name": "build",
       "displayName": "Build with hardcoded torch path",
-      "generator": "Unix Makefiles", 
+      "generator": "Unix Makefiles",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_PREFIX_PATH": "/home/krkartikay/.pyenv/versions/code/lib/python3.11/site-packages/torch/share/cmake/Torch",
-        "CMAKE_BUILD_RPATH": "/home/krkartikay/.pyenv/versions/code/lib/python3.11/site-packages/torch/lib",
-        "CMAKE_INSTALL_RPATH": "/home/krkartikay/.pyenv/versions/code/lib/python3.11/site-packages/torch/lib",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "CMAKE_PREFIX_PATH": "/Users/krkartikay/.pyenv/versions/az/lib/python3.12/site-packages/torch/share/cmake/Torch",
+        "CMAKE_BUILD_RPATH": "/Users/krkartikay/.pyenv/versions/az/lib/python3.12/site-packages/torch/lib",
+        "CMAKE_INSTALL_RPATH": "/Users/krkartikay/.pyenv/versions/az/lib/python3.12/site-packages/torch/lib",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "Python_ROOT_DIR": "/Users/krkartikay/.pyenv/versions/az",
+        "Python_EXECUTABLE": "/Users/krkartikay/.pyenv/versions/az/bin/python",
+        "Python_FIND_VIRTUALENV": "FIRST",
+        "Python_SITE_PACKAGES": "/Users/krkartikay/.pyenv/versions/az/lib/python3.12/site-packages"
       }
     }
   ],
