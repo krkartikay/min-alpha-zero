@@ -33,7 +33,6 @@ def run_self_play():
     print("=" * 50)
 
     maz.run_worker()
-    maz.stop_evaluator()
 
 
 def run_training():
