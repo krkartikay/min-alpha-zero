@@ -2,6 +2,7 @@
 #include <torch/torch.h>
 
 #include "alpha_zero.h"
+#include "counter.hpp"
 
 inline torch::jit::script::Module g_model;
 
@@ -45,6 +46,8 @@ std::vector<eval_request_t> get_requests_batch() {
 void process_batch(std::vector<eval_request_t> nodes) {
   // Copy Tensors into a single batch tensor
   const size_t batch_size = nodes.size();
+  metrics::Increment("batch_evaluations");
+  metrics::Increment("positions_evaluated", batch_size);
   torch::Tensor input = torch::empty({int(batch_size), 7, 8, 8},
                                      torch::TensorOptions().dtype(torch::kF32));
 
