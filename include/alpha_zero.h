@@ -6,16 +6,16 @@
 #include <absl/time/time.h>
 
 #include <algorithm>
-#include <random>
-#include <string>
-#include <vector>
 #include <boost/fiber/all.hpp>
 #include <chess.hpp>
 #include <chess_utils.hpp>
 #include <chrono>
 #include <fstream>
 #include <iostream>
+#include <random>
 #include <span>
+#include <string>
+#include <vector>
 
 #ifndef ALPHA_ZERO_H
 #define ALPHA_ZERO_H
@@ -97,12 +97,12 @@ class Node {
   Node& operator=(const Node&) = delete;
   Node(Node&&) = default;
   Node& operator=(Node&&) = default;
-  
+
   // Methods that were previously free functions
   int selectAction();
   void evaluate();
   void evaluateLeafNode();
-  
+
   // For debugging purposes Only
   std::string move_history;
 };
@@ -128,7 +128,7 @@ class Game {
  public:
   Game();
   Game(const std::string& fen);
-  
+
   // Methods that were previously free functions
   void selfPlay(int game_id);
   void updateRoot(int action);
@@ -138,7 +138,7 @@ class Game {
   void runSimulation();
   void appendToTrainingFile() const;
   void writeGameToLog(int game_id) const;
-  
+
   std::unique_ptr<Node> root;
   std::vector<GameState> history;
   std::vector<std::string> move_list;
@@ -176,6 +176,13 @@ class RandomAgent : public ChessAgent {
   mutable std::mt19937 rng;
 };
 
+class RawModelAgent : public ChessAgent {
+ public:
+  RawModelAgent();
+  int select_action(Game& game) override;
+  std::string name() const override;
+};
+
 class MCTSAgent : public ChessAgent {
  public:
   MCTSAgent();
@@ -193,7 +200,7 @@ class GameResult {
 
 GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other,
                                int game_num);
-void run_agent_tournament();
+void run_agent_tournament(ChessAgent& agent1, ChessAgent& agent2);
 
 // Logging and Debugging ---------------------------------
 

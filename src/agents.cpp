@@ -1,7 +1,7 @@
-#include "alpha_zero.h"
-
 #include <random>
 #include <vector>
+
+#include "alpha_zero.h"
 
 namespace alphazero {
 
@@ -22,6 +22,27 @@ int RandomAgent::select_action(Game& game) {
 }
 
 std::string RandomAgent::name() const { return "Random"; }
+
+RawModelAgent::RawModelAgent() {}
+
+int RawModelAgent::select_action(Game& game) {
+  // Evaluate the root node if not already evaluated
+  if (!game.root->is_evaluated) {
+    game.root->evaluate();
+  }
+  // Select the action with the highest policy probability among legal moves
+  float best_prob = -1.0f;
+  int best_action = -1;
+  for (int i = 0; i < kNumActions; ++i) {
+    if (game.root->legal_mask[i] && game.root->policy[i] > best_prob) {
+      best_prob = game.root->policy[i];
+      best_action = i;
+    }
+  }
+  return best_action;
+}
+
+std::string RawModelAgent::name() const { return "RawModel"; }
 
 MCTSAgent::MCTSAgent() {}
 
@@ -76,10 +97,10 @@ GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other,
       "Game finished. Moves: %d, Result: %s", moves_played,
       !is_game_over ? "Incomplete"
       : game_result == chess::GameResult::DRAW
-            ? "Draw"
-            : (game.root->board.sideToMove() == chess::Color::BLACK
-                   ? "White wins"
-                   : "Black wins"));
+          ? "Draw"
+          : (game.root->board.sideToMove() == chess::Color::BLACK
+                 ? "White wins"
+                 : "Black wins"));
 
   if (!is_game_over || game_result == chess::GameResult::DRAW) {
     return {moves_played, 0, 1, 0};
@@ -92,32 +113,29 @@ GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other,
   return {moves_played, agent_won ? 1 : 0, 0, agent_won ? 0 : 1};
 }
 
-void run_agent_tournament() {
+void run_agent_tournament(ChessAgent& agent1, ChessAgent& agent2) {
   int total_moves = 0;
-  int total_agent_wins = 0;
+  int total_agent1_wins = 0;
   int total_draws = 0;
-  int total_other_wins = 0;
+  int total_agent2_wins = 0;
 
   int num_games = g_config.num_games;
 
-  LOG(INFO) << absl::StrFormat(
-      "Starting tournament: MCTS(%d sims) vs Random (%d games)",
-      g_config.num_simulations, num_games);
+  LOG(INFO) << absl::StrFormat("Starting tournament: %s vs %s (%d games)",
+                               agent1.name(), agent2.name(), num_games);
 
   std::vector<GameResult> results(num_games);
 
   boost::fibers::mutex results_mutex;
   std::vector<boost::fibers::fiber> fibers;
   for (int i = 0; i < num_games; ++i) {
-    fibers.emplace_back([i, &results]() {
-      alphazero::RandomAgent random_agent;
-      alphazero::MCTSAgent mcts_agent;
-      auto result = alphazero::play_agent_vs_agent(mcts_agent, random_agent, i);
+    fibers.emplace_back([i, &results, &agent1, &agent2]() {
+      auto result = alphazero::play_agent_vs_agent(agent1, agent2, i);
       results[i] = result;
       LOG(INFO) << absl::StrFormat("Game %d: %s", i + 1,
-                                   result.agent_wins ? "MCTS wins"
+                                   result.agent_wins ? agent1.name() + " wins"
                                    : result.draws    ? "Draw"
-                                                     : "Random wins");
+                                                     : agent2.name() + " wins");
     });
   }
   for (auto& f : fibers) {
@@ -126,19 +144,21 @@ void run_agent_tournament() {
 
   for (const auto& result : results) {
     total_moves += result.moves_played;
-    total_agent_wins += result.agent_wins;
+    total_agent1_wins += result.agent_wins;
     total_draws += result.draws;
-    total_other_wins += result.other_wins;
+    total_agent2_wins += result.other_wins;
   }
 
   LOG(INFO) << "Tournament results:";
   LOG(INFO) << absl::StrFormat("  Games played: %d", num_games);
-  LOG(INFO) << absl::StrFormat("  MCTS wins: %d (%.1f%%)", total_agent_wins,
-                               100.0f * total_agent_wins / num_games);
+  LOG(INFO) << absl::StrFormat("  %s wins: %d (%.1f%%)", agent1.name(),
+                               total_agent1_wins,
+                               100.0f * total_agent1_wins / num_games);
   LOG(INFO) << absl::StrFormat("  Draws: %d (%.1f%%)", total_draws,
                                100.0f * total_draws / num_games);
-  LOG(INFO) << absl::StrFormat("  Random wins: %d (%.1f%%)", total_other_wins,
-                               100.0f * total_other_wins / num_games);
+  LOG(INFO) << absl::StrFormat("  %s wins: %d (%.1f%%)", agent2.name(),
+                               total_agent2_wins,
+                               100.0f * total_agent2_wins / num_games);
   LOG(INFO) << absl::StrFormat("  Average moves per game: %.1f",
                                float(total_moves) / num_games);
 }
