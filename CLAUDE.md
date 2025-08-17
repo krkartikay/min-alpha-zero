@@ -13,28 +13,22 @@ cmake --build build --parallel
 - Dependencies: LibTorch, Boost (fiber/context), GTest, Abseil, pybind11
 - CMakePresets.json defines "build" preset with hardcoded torch paths
 - Builds to `build/` directory
+- Primary output: `min_alpha_zero` Python module with C++ bindings
 
-## Key Executables
-
-```
-./build/alpha_zero [--num_games=N] [--num_simulations=N] [--batch_size=N]
-./build/test_all           # GTest test suite
-./build/model_eval         # Model evaluation against agents
-./build/test_board         # Board functionality test
-```
-
-## Training Pipeline
+## Training Pipeline (Python-Centric)
 
 ```
-./run.sh [--num_iterations=N] [--num_games=X]  # Full training loop
-python scripts/model.py                        # Create initial model
-python scripts/train.py                        # Train on existing data
-python -c "import min_alpha_zero; ..."         # Python bindings
+python scripts/run_all.py              # Complete training loop (infinite)
+python scripts/alpha_zero.py           # Self-play generation
+python scripts/train.py                # Neural network training
+python scripts/model_eval.py           # Agent tournament evaluation
+python scripts/model.py                # Create initial model
 ```
 
-- `run.sh`: Orchestrates model→self-play→training→evaluation cycle
-- Training data: binary format in `training_data.bin` (see scripts/dataset.py:8-15)
+- **Python-first workflow**: All orchestration through Python scripts using C++ bindings
+- Training data: binary format in `training_data.bin` (see scripts/dataset.py:25-37)
 - Models: TorchScript `.pt` files, versioned in `out/model_NNN.pt`
+- Continuous training: `run_all.py` provides infinite model→self-play→training→evaluation cycle
 
 ## Architecture
 
@@ -65,49 +59,106 @@ python -c "import min_alpha_zero; ..."         # Python bindings
 - `RandomAgent`, `MCTSAgent` implementations
 - Tournament evaluation in agents.cpp
 
+## Analysis and Debugging Tools
+
+```
+python scripts/mcts_demo.py              # Interactive MCTS tree visualization
+python scripts/debug_mcts.py             # Multi-model MCTS testing
+python scripts/mcts_mate_in_one.py       # Tactical position testing
+python scripts/analyze_logits.py         # Model behavior analysis
+python scripts/print_training_records.py # Training data inspection
+python scripts/dashboards/explore_data.py # Interactive data explorer (Dash)
+python scripts/dashboards/logs.py        # Real-time log monitoring (Dash)
+```
+
+- **Advanced visualization**: Interactive dashboards with chess board SVG rendering
+- **Policy analysis**: Move probability heatmaps and top-move arrows
+- **Training monitoring**: Real-time log updates and data exploration
+- **Tactical testing**: Specialized mate-in-one position evaluation
+
 ## File Structure
 
 ```
 include/
-├── alpha_zero.h      # Core MCTS/NN classes and functions
-├── chess.hpp         # External chess library (large)
+├── alpha_zero.h      # Core MCTS/NN classes and functions  
+├── chess.hpp         # External chess library (5195 lines)
 └── chess_utils.hpp   # Board↔tensor, move↔int conversion
 
 src/
-├── main.cpp          # CLI entry point with absl flags
-├── agents.cpp        # ChessAgent implementations + tournament
-├── evaluator.cpp     # Batched NN evaluation fiber
-├── worker.cpp        # MCTS simulation logic
-├── logging.cpp       # FileSink for absl::log
-├── python_bindings.cpp # pybind11 module "min_alpha_zero"
-└── model_eval.cpp    # Standalone model evaluation
+├── agents.cpp        # ChessAgent implementations + tournament system
+├── evaluator.cpp     # Batched NN evaluation fiber with CUDA
+├── worker.cpp        # MCTS simulation and self-play logic
+├── logging.cpp       # Custom Abseil log sink + tree visualization
+└── python_bindings.cpp # Comprehensive pybind11 module "min_alpha_zero"
 
-scripts/
-├── __init__.py       # Python package marker
-├── dataset.py        # Training data utilities
-├── model.py          # Neural network model creation
-├── train.py          # Model training script
-├── mcts_demo.py      # MCTS demonstration
-├── mcts_mate_in_one.py # MCTS puzzle solver
-├── dashboards/       # Data analysis and visualization
-│   ├── __init__.py
-│   ├── explore_data.py # Training data analysis
-│   ├── logs.py       # Log file parsing/visualization
-│   └── requirements.txt # matplotlib, pandas
-└── test/            # Python tests and visualizations
-    ├── __init__.py
-    ├── mate_in_one.py # Chess puzzle visualization
-    └── *.png/*.svg    # Generated visualizations
+scripts/                # Python package for training and analysis
+├── alpha_zero.py     # Self-play execution with C++ bindings
+├── model.py          # 8-layer ResNet with policy/value heads
+├── train.py          # Model training with masked softmax
+├── dataset.py        # Binary training data management
+├── run_all.py        # Complete training orchestration
+├── model_eval.py     # Agent tournament evaluation
+├── analyze_logits.py # Model behavior analysis
+├── debug_mcts.py     # MCTS debugging and visualization
+├── mcts_demo.py      # Interactive MCTS demonstration
+├── mcts_mate_in_one.py # Tactical position testing
+├── print_training_records.py # Training data inspection
+├── dashboards/       # Interactive web-based analysis tools
+│   ├── explore_data.py # Training data explorer with chess visualization
+│   └── logs.py       # Real-time log monitoring dashboard
+└── test/            # Python-based testing and validation
+    ├── mate_in_one.py # Pure Python chess puzzle testing
+    └── test_board.py # Basic functionality validation
 
-External: abseil-cpp/, pybind11/ (git submodules)
+test/
+└── test_all.cpp      # Comprehensive C++ test suite (Google Test)
+
+backlog/
+└── todo_001.md       # Spatial move encoding architecture proposal
+
+external/             # Git submodules
+├── abseil-cpp/       # Google utilities, logging, flags
+└── pybind11/         # Python binding generation
 ```
 
 ## Testing
 
 ```
-./build/test_all                          # Run all C++ tests
-python scripts/test/mate_in_one.py        # Chess puzzle test
-python scripts/dashboards/explore_data.py # Data analysis
+./build/test_all                          # C++ unit tests (Google Test)
+python scripts/test/mate_in_one.py        # Python chess puzzle tests
+python scripts/test/test_board.py         # Basic board functionality
+python scripts/model_eval.py              # Agent tournament evaluation
 ```
 
-No lint commands configured. Tests validate Node construction, MCTS operations, move encoding, and game mechanics.
+- **C++ tests**: Comprehensive unit tests for Node, MCTS, chess utilities, and agents
+- **Python tests**: End-to-end model validation and tactical position testing
+- **Integration tests**: Multi-model comparison and statistical validation
+- **No lint commands configured**: Code follows C++17 standards with strict warnings
+
+## Key Improvements and Architecture Changes
+
+### Python-Centric Workflow
+- **Migration**: From C++ executables to Python orchestration with C++ bindings
+- **Benefit**: Enhanced experimentation, visualization, and data analysis capabilities
+- **Integration**: Seamless numpy array integration for efficient data transfer
+
+### Advanced Visualization System  
+- **Interactive dashboards**: Dash-based real-time training data exploration
+- **Chess visualization**: SVG board rendering with policy heatmaps and move arrows
+- **Monitoring**: Live log updates and training progress tracking
+
+### Comprehensive Analysis Tools
+- **Model comparison**: Multi-iteration performance evaluation
+- **Tactical testing**: Specialized mate-in-one position validation
+- **Debug capabilities**: MCTS tree visualization and model behavior analysis
+- **Training insights**: Detailed data inspection and policy analysis
+
+### Performance Optimizations
+- **Cooperative threading**: Boost.Fiber for MCTS parallelization
+- **GPU acceleration**: Batched CUDA neural network evaluation
+- **Memory efficiency**: Lazy child node initialization and optimized tensor management
+
+### Future Architecture (Backlog)
+- **Spatial move encoding**: Proposed 2D convolutional policy head architecture
+- **Enhanced patterns**: Leveraging spatial relationships in move representation
+- **Breaking changes**: Would require complete model retraining
