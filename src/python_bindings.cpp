@@ -153,6 +153,7 @@ PYBIND11_MODULE(min_alpha_zero, m) {
     absl::InitializeLog();
     absl::SetMinLogLevel(absl::LogSeverityAtLeast::kInfo);
     absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfo);
+    // absl::SetGlobalVLogLevel(1);
     alphazero::g_config.eval_timeout = alphazero::duration_t(1);
     alphazero::g_evaluation_queue = std::make_unique<alphazero::eval_channel_t>(
         alphazero::g_config.channel_size);

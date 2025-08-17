@@ -224,11 +224,12 @@ Game::Game(const std::string& fen) {
 
 Node::Node(const chess::Board& board) : board(board) {
   // also sets legal mask and is_leaf flag
-  chess::Movelist movelist;
-  chess::movegen::legalmoves(movelist, board);
-  if (movelist.empty()) {
+  auto result = board.isGameOver();
+  if (result.first != chess::GameResultReason::NONE) {
     is_leaf = true;
   }
+  chess::Movelist movelist;
+  chess::movegen::legalmoves(movelist, board);
   for (chess::Move move : movelist) {
     int move_idx = move_to_int(move);
     legal_mask[move_idx] = true;
