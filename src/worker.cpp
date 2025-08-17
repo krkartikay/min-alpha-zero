@@ -1,4 +1,5 @@
 #include "alpha_zero.h"
+#include "counter.hpp"
 
 namespace alphazero {
 
@@ -60,6 +61,7 @@ void Game::selfPlay(int game_id) {
     updateRoot(action);
 
     moves_played++;
+    metrics::Increment("moves_played");
     is_game_over = root->is_leaf;
 
     VLOG(2) << absl::StrFormat("Current board state:\n%s",
@@ -121,6 +123,7 @@ int Game::selectMove() {
   for (int i = 0; i < g_config.num_simulations; ++i) {
     fibers.emplace_back([this]() { runSimulation(); });
   }
+  metrics::Increment("simulations_started", g_config.num_simulations);
   // Join all fibers
   for (auto& fiber : fibers) {
     fiber.join();
@@ -170,6 +173,7 @@ void Game::runSimulation() {
     current_node->evaluateLeafNode();
   }
   if (!current_node->is_evaluated) {
+    metrics::Increment("positions_sent_for_evaluation");
     current_node->evaluate();
   }
 
@@ -255,6 +259,7 @@ Node* Node::getChildNode(int move_idx) {
   chess::Board new_board = board;
   chess::Move move = int_to_move(move_idx, board);
   new_board.makeMove(move);
+  metrics::Increment("nodes_created");
   std::unique_ptr<Node> new_node = std::make_unique<Node>(new_board);
   new_node->parent = this;
   new_node->parent_action = move_idx;
