@@ -65,7 +65,7 @@ GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other,
 
   int moves_played = 0;
 
-  while (!game.root->is_leaf && moves_played < 100) {
+  while (!game.root->is_leaf) {
     ChessAgent* current = (moves_played % 2 == 0) ? white : black;
 
     int action = current->select_action(game);

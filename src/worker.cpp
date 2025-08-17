@@ -41,7 +41,7 @@ void Game::selfPlay(int game_id) {
   bool is_game_over = false;
   int moves_played = 0;
   move_list.clear();
-  while (!is_game_over && moves_played < 100) {
+  while (!is_game_over) {
     // Select move by running N simulations
     int action = selectMove();
 
@@ -52,7 +52,8 @@ void Game::selfPlay(int game_id) {
     VLOG(1) << absl::StrFormat(
         "(Game %d) Move played: %s", game_id,
         chess::uci::moveToSan(root->board, int_to_move(action, root->board)));
-    move_list.push_back(chess::uci::moveToSan(root->board, int_to_move(action, root->board)));
+    move_list.push_back(
+        chess::uci::moveToSan(root->board, int_to_move(action, root->board)));
     if (g_config.debug) {
       dump_game_tree_to_file(*this, game_id, moves_played, action);
     }
@@ -75,7 +76,6 @@ void Game::selfPlay(int game_id) {
       history[0].final_value);
 }
 
-
 void Game::updateRoot(int action) {
   // Update root node to the selected child
   root->getChildNode(action);  // to make sure the child node exists
@@ -83,7 +83,6 @@ void Game::updateRoot(int action) {
   root = std::move(chosen_child);
   root->parent = nullptr;  // Reset parent to null
 }
-
 
 void Game::saveGameState() {
   history.emplace_back();
@@ -93,7 +92,6 @@ void Game::saveGameState() {
   history.back().value = root->value;
   history.back().child_visit_counts = root->child_visits;
 }
-
 
 void Game::updateGameHistory() {
   auto result = root->board.isGameOver();
@@ -109,7 +107,6 @@ void Game::updateGameHistory() {
     final_value = -final_value;  // Reverse for the other side
   }
 }
-
 
 int Game::selectMove() {
   // MCTS move selection process
@@ -131,18 +128,23 @@ int Game::selectMove() {
   for (int i = 0; i < kNumActions; ++i) {
     if (g_config.temperature == 0.0f) {
       // At temperature 0, select the most visited move deterministically
-      tempered_visits[i] = (root->child_visits[i] == *std::max_element(root->child_visits.begin(), root->child_visits.end())) ? 1.0f : 0.0f;
+      tempered_visits[i] = (root->child_visits[i] ==
+                            *std::max_element(root->child_visits.begin(),
+                                              root->child_visits.end()))
+                               ? 1.0f
+                               : 0.0f;
     } else {
-      tempered_visits[i] = std::pow(root->child_visits[i], 1.0f / g_config.temperature);
+      tempered_visits[i] =
+          std::pow(root->child_visits[i], 1.0f / g_config.temperature);
     }
   }
-  std::discrete_distribution<int> dist(tempered_visits.begin(), tempered_visits.end());
+  std::discrete_distribution<int> dist(tempered_visits.begin(),
+                                       tempered_visits.end());
   int action = dist(g_rng);
 
   CHECK(root->legal_mask[action]) << "Illegal move selected: " << action;
   return action;
 }
-
 
 // Run MCTS simulation
 // Finds a node that is as yet unevaluated and evaluates it,
@@ -184,7 +186,6 @@ void Game::runSimulation() {
   }
 }
 
-
 int Node::selectAction() {
   CHECK(!is_leaf) << "Cannot select action on leaf node: " << move_history;
   // current node visit count = sum of child visit counts + 1
@@ -195,9 +196,8 @@ int Node::selectAction() {
   std::array<float, kNumActions> score = {};
   for (int i = 0; i < kNumActions; i++) {
     // Q -> avg evaluation
-    float child_value = (child_visits[i] == 0)
-                            ? 0
-                            : child_values[i] / child_visits[i];
+    float child_value =
+        (child_visits[i] == 0) ? 0 : child_values[i] / child_visits[i];
     // P -> prior probability
     float prior_probability = policy[i];
     // Exploration term
@@ -209,7 +209,6 @@ int Node::selectAction() {
   int action = dist(g_rng);
   return action;
 }
-
 
 // -----------------------------------------------------------
 
@@ -236,8 +235,7 @@ Node::Node(const chess::Board& board) : board(board) {
   }
 }
 
-Node::Node(const std::string& fen) : Node(chess::Board(fen)) {
-}
+Node::Node(const std::string& fen) : Node(chess::Board(fen)) {}
 
 Node* Node::getChildNode(int move_idx) {
   if (!legal_mask[move_idx]) {
@@ -294,16 +292,15 @@ void Game::appendToTrainingFile() const {
   }
 }
 
-
 void Game::writeGameToLog(int game_id) const {
   std::ofstream out("selfplay_games.log", std::ios::app);
   if (!out) throw std::runtime_error("open failed: selfplay_games.log");
-  
+
   // Determine game result from final_value
   std::string result;
   int final_value = history.empty() ? 0 : history[0].final_value;
   bool game_incomplete = move_list.size() >= 100;  // Hit move limit
-  
+
   if (game_incomplete) {
     result = "*";
   } else if (final_value == 1) {
@@ -313,7 +310,7 @@ void Game::writeGameToLog(int game_id) const {
   } else {
     result = "1/2-1/2";
   }
-  
+
   // Write game header and moves in PGN format
   out << "Game " << game_id << ": ";
   for (size_t i = 0; i < move_list.size(); ++i) {
@@ -334,7 +331,6 @@ void Game::writeGameToLog(int game_id) const {
   out << " " << result << std::endl;
 }
 
-
 // -----------------------------------------------------------
 
 // Node class method implementations
@@ -353,7 +349,6 @@ void Node::evaluate() {
   future.get();
 }
 
-
 void Node::evaluateLeafNode() {
   // Doesn't need the neural net.
   // If we're checkmated value is -1.
@@ -366,7 +361,6 @@ void Node::evaluateLeafNode() {
   }
   // policy doesn't need to be set, all 0 is ok
 }
-
 
 // -----------------------------------------------------------
 
