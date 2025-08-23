@@ -86,6 +86,10 @@ void Game::selfPlay(int game_id) {
                                board_to_string(root->board));
   }
 
+  // Saving game state at the end of the game also.
+  // E.g. position after checkmate has occured.
+  saveGameState();
+
   // At the end of the game note final winner and write to training file.
   updateGameHistory();
   appendToTrainingFile();
