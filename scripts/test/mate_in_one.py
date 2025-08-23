@@ -1,3 +1,4 @@
+import sys
 import torch
 import chess
 import chess.svg
@@ -43,12 +44,14 @@ def index_to_coordinates(i):
 
 def test_mate_in_one():
     # Load the model
-    model = torch.jit.load("../model.pt")
+    model = "model.pt" if (len(sys.argv) != 2 or not sys.argv[1]) else sys.argv[1]
+    model = torch.jit.load(model)
     model.eval()
-    
+
     # Scholar's mate position - White to move and mate in one
     # Position after: 1.e4 e5 2.Bc4 Nc6 3.Qh5 Nf6?? 4.Qxf7# (mate)
-    board = chess.Board("rnbqkb1r/pppp1ppp/5n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 2 4")
+    board = chess.Board()
+    # board = chess.Board("rnbqkb1r/pppp1ppp/5n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 2 4")
     
     print(f"Board position:\n{board}")
     print(f"Legal moves: {len(list(board.legal_moves))}")
@@ -84,10 +87,15 @@ def test_mate_in_one():
     
     # Create policy heatmap with matplotlib
     policy_heatmap_data = np.zeros((64, 64))
-    for i, value in enumerate(policy_probs[0]):
+    masked_policy_heatmap_data = np.zeros((64, 64))
+    for i, policy in enumerate(policy_probs[0]):
         x, y = index_to_coordinates(i)
-        policy_heatmap_data[x][y] = value.item()
-    
+        policy_heatmap_data[x][y] = policy.item()
+        if i in legal_move_indices:
+            masked_policy_heatmap_data[x][y] = policy.item()
+        else:
+            masked_policy_heatmap_data[x][y] = 0.0
+
     plt.figure(figsize=(10, 10))
     plt.imshow(policy_heatmap_data, cmap='viridis', origin='lower')
     plt.colorbar(label='Policy Probability')
@@ -97,7 +105,16 @@ def test_mate_in_one():
     plt.savefig('mate_in_one_policy_heatmap.png', dpi=150, bbox_inches='tight')
     plt.close()
     print("\nPolicy heatmap saved as 'mate_in_one_policy_heatmap.png'")
-    
+    plt.figure(figsize=(10, 10))
+    plt.imshow(masked_policy_heatmap_data, cmap='viridis', origin='lower')
+    plt.colorbar(label='Masked Policy Probability')
+    plt.title('Policy Heatmap (64x64 from-to moves)')
+    plt.xlabel('To Square Y')
+    plt.ylabel('From Square X')
+    plt.savefig('mate_in_one_masked_policy_heatmap.png', dpi=150, bbox_inches='tight')
+    plt.close()
+    print("\nPolicy heatmap saved as 'mate_in_one_masked_policy_heatmap.png'")
+
     # Create board with arrows for top 5 moves
     arrows = []
     for i, (move, prob) in enumerate(move_probs[:5]):
