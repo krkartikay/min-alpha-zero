@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import min_alpha_zero as maz
 from train import main as train_main
 
-NUM_SIMULATIONS = 1000
+NUM_SIMULATIONS = 100
 NUM_GAMES_EVAL = 10
 NUM_GAMES_SELFPLAY = 10
 NUM_THREADS = 10
