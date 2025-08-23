@@ -68,7 +68,7 @@ def main():
     print(f"{'#'*60}")
 
     maz.init_model()
-    run_model_eval()
+    # run_model_eval()
     run_self_play()
     run_training()
 
