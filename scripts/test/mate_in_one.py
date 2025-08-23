@@ -83,9 +83,63 @@ def test_mate_in_one():
     legal_moves = list(board.legal_moves)
     legal_move_indices = [move_to_int(move) for move in legal_moves]
 
+    # (1) Logits heatmap (unmasked)
+    logits_np = policy_logits[0].detach().cpu().numpy()
+    logits_map = np.zeros((64, 64), dtype=np.float32)
+    for i in range(len(logits_np)):
+        x, y = index_to_coordinates(i)
+        logits_map[x, y] = float(logits_np[i])
+    plt.figure(figsize=(10, 10))
+    plt.imshow(logits_map, cmap="viridis", origin="lower")
+    plt.colorbar(label="Policy Logits")
+    plt.title("Policy Logits Heatmap (64x64 from-to moves)")
+    plt.savefig("mate_in_one_logits_heatmap.png", dpi=150, bbox_inches="tight")
+    plt.close()
+    print("Logits heatmap saved as 'mate_in_one_logits_heatmap.png'")
+
+    # (2) Logits heatmap (masked to legal moves, illegal moves as -10)
+    masked_logits_np = np.full_like(logits_np, -10.0)
+    for idx in legal_move_indices:
+        masked_logits_np[idx] = logits_np[idx]
+    masked_logits_map = np.zeros((64, 64), dtype=np.float32)
+    for i in range(len(masked_logits_np)):
+        x, y = index_to_coordinates(i)
+        masked_logits_map[x, y] = float(masked_logits_np[i])
+    plt.figure(figsize=(10, 10))
+    plt.imshow(masked_logits_map, cmap="viridis", origin="lower")
+    plt.colorbar(label="Masked Policy Logits")
+    plt.title("Masked Policy Logits Heatmap (legal moves only)")
+    plt.savefig("mate_in_one_masked_logits_heatmap.png", dpi=150, bbox_inches="tight")
+    plt.close()
+    print("Masked logits heatmap saved as 'mate_in_one_masked_logits_heatmap.png'")
+
+    # (3) Policy probability heatmap (softmax over masked logits, illegal moves as -1e10)
+    masked_logits_for_softmax = np.full_like(logits_np, -1e10)
+    for idx in legal_move_indices:
+        masked_logits_for_softmax[idx] = logits_np[idx]
+    masked_logits_tensor = torch.tensor(
+        masked_logits_for_softmax, dtype=policy_logits.dtype
+    )
+    masked_policy_probs = torch.softmax(masked_logits_tensor, dim=0).cpu().numpy()
+    masked_probs_map = np.zeros((64, 64), dtype=np.float32)
+    for i in range(len(masked_policy_probs)):
+        x, y = index_to_coordinates(i)
+        masked_probs_map[x, y] = float(masked_policy_probs[i])
+    plt.figure(figsize=(10, 10))
+    plt.imshow(masked_probs_map, cmap="viridis", origin="lower")
+    plt.colorbar(label="Masked Policy Probability")
+    plt.title("Masked Policy Probability Heatmap (softmax over masked logits)")
+    plt.savefig(
+        "mate_in_one_masked_policy_probs_heatmap.png", dpi=150, bbox_inches="tight"
+    )
+    plt.close()
+    print(
+        "Masked policy probability heatmap saved as 'mate_in_one_masked_policy_probs_heatmap.png'"
+    )
+
     # Get move probabilities and sort
     move_probs = [
-        (move, policy_probs[0, move_to_int(move)].item()) for move in legal_moves
+        (move, masked_policy_probs[move_to_int(move)].item()) for move in legal_moves
     ]
     move_probs.sort(key=lambda x: x[1], reverse=True)
 
@@ -93,36 +147,10 @@ def test_mate_in_one():
     for i, (move, prob) in enumerate(move_probs[:10]):
         print(f"{i+1:2d}. {move}: {prob:.6f}")
 
-    # Create policy heatmap with matplotlib
-    policy_heatmap_data = np.zeros((64, 64))
-    masked_policy_heatmap_data = np.zeros((64, 64))
-    for i, policy in enumerate(policy_logits[0]):
-        x, y = index_to_coordinates(i)
-        policy_heatmap_data[x][y] = policy.item()
-        if i in legal_move_indices:
-            masked_policy_heatmap_data[x][y] = policy.item()
-        else:
-            masked_policy_heatmap_data[x][y] = -10.0
-
-    plt.figure(figsize=(10, 10))
-    plt.imshow(policy_heatmap_data, cmap="viridis", origin="lower")
-    plt.colorbar(label="Policy Logits")
-    plt.title("Policy Logits Heatmap (64x64 from-to moves)")
-    plt.savefig("mate_in_one_policy_heatmap.png", dpi=150, bbox_inches="tight")
-    plt.close()
-    print("\nPolicy heatmap saved as 'mate_in_one_policy_heatmap.png'")
-    plt.figure(figsize=(10, 10))
-    plt.imshow(masked_policy_heatmap_data, cmap="viridis", origin="lower")
-    plt.colorbar(label="Masked Policy Logits")
-    plt.title("Policy Logits Heatmap (64x64 from-to moves)")
-    plt.savefig("mate_in_one_masked_policy_heatmap.png", dpi=150, bbox_inches="tight")
-    plt.close()
-    print("\nPolicy heatmap saved as 'mate_in_one_masked_policy_heatmap.png'")
-
-    # Create board with arrows for top 5 moves
+    # Create board with arrows for top 20 moves
     arrows = []
     for i, (move, prob) in enumerate(move_probs[:20]):
-        opacity = prob * 1e3  # opacity proportional to prob
+        opacity = prob * 10  # opacity proportional to prob
         rgba_color = f"rgba(0, 60, 100, {opacity})"
         arrows.append(
             chess.svg.Arrow(move.from_square, move.to_square, color=rgba_color)

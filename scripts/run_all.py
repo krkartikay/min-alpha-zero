@@ -7,6 +7,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import min_alpha_zero as maz
 from train import main as train_main
 
+from analyze_logits import plot_logits_comparison as logits_main
+from test.mate_in_one import test_mate_in_one as visualize_main
+
 NUM_SIMULATIONS = 100
 NUM_GAMES_EVAL = 10
 NUM_GAMES_SELFPLAY = 10
@@ -71,6 +74,9 @@ def main():
         run_model_eval()
         run_self_play()
         run_training()
+
+        visualize_main()
+        logits_main()
 
         iteration += 1
 
