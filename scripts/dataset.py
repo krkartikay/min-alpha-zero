@@ -4,15 +4,19 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-K_INPUT, K_ACTIONS = 7*8*8, 64*64
-DT = np.dtype([
-    ("board_tensor",       np.float32, (K_INPUT,)),
-    ("legal_mask",         np.bool,    (K_ACTIONS,)),
-    ("policy",             np.float32, (K_ACTIONS,)),
-    ("child_visit_counts", np.int32,   (K_ACTIONS,)),
-    ("value",              np.float32),
-    ("final_value",        np.int32),
-])
+K_INPUT, K_ACTIONS = 7 * 8 * 8, 64 * 64
+DT = np.dtype(
+    [
+        ("board_tensor", np.float32, (K_INPUT,)),
+        ("legal_mask", np.bool, (K_ACTIONS,)),
+        ("policy", np.float32, (K_ACTIONS,)),
+        ("child_visit_counts", np.int32, (K_ACTIONS,)),
+        ("child_values", np.float32, (K_ACTIONS,)),
+        ("value", np.float32),
+        ("final_value", np.int32),
+    ]
+)
+
 
 class TrainingDataset(Dataset):
     def __init__(self, filename):
@@ -23,20 +27,23 @@ class TrainingDataset(Dataset):
 
     def __getitem__(self, idx):
         rec = self.records[idx]
-        board_tensor = torch.from_numpy(rec['board_tensor']).float().reshape(7, 8, 8)
-        legal_mask = torch.from_numpy(rec['legal_mask']).bool()
-        policy = torch.from_numpy(rec['policy']).float()
-        child_visit_counts = torch.from_numpy(rec['child_visit_counts']).int()
-        value = torch.tensor(rec['value'], dtype=torch.float32)
-        final_value = torch.tensor(rec['final_value'], dtype=torch.int32)
+        board_tensor = torch.from_numpy(rec["board_tensor"]).float().reshape(7, 8, 8)
+        legal_mask = torch.from_numpy(rec["legal_mask"]).bool()
+        policy = torch.from_numpy(rec["policy"]).float()
+        child_visit_counts = torch.from_numpy(rec["child_visit_counts"]).int()
+        child_values = torch.from_numpy(rec["child_values"]).float()
+        value = torch.tensor(rec["value"], dtype=torch.float32)
+        final_value = torch.tensor(rec["final_value"], dtype=torch.int32)
         return {
-            'board_tensor': board_tensor,
-            'policy': policy,
-            'legal_mask': legal_mask,
-            'child_visit_counts': child_visit_counts,
-            'value': value,
-            'final_value': final_value
+            "board_tensor": board_tensor,
+            "policy": policy,
+            "legal_mask": legal_mask,
+            "child_visit_counts": child_visit_counts,
+            "child_values": child_values,
+            "value": value,
+            "final_value": final_value,
         }
+
 
 # Usage example:
 if __name__ == "__main__":
@@ -62,7 +69,9 @@ if __name__ == "__main__":
         print(f"  Policy:\n{batch['policy'][0]}")
         print(f"  Policy vector total: {batch['policy'][0].sum().item()}")
         print(f"  Child Visit Counts:\n{batch['child_visit_counts'][0]}")
-        print(f"  Total child visit counts: {batch['child_visit_counts'][0].sum().item()}")
+        print(
+            f"  Total child visit counts: {batch['child_visit_counts'][0].sum().item()}"
+        )
         print(f"  Value:\n{batch['value'][0]}")
         print(f"  Final Value:\n{batch['final_value'][0]}")
         if i >= 0:  # Only print the first batch for brevity

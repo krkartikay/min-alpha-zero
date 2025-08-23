@@ -56,6 +56,7 @@ class Config {
   int batch_size = 1000;
   int num_games = 100;
   int num_threads = 1;
+  int moves_limit = 100;
   duration_t eval_timeout = 1ms;
   std::string model_path = "model.pt";
   std::string training_file = "training_data.bin";
@@ -118,6 +119,8 @@ class GameState {
   std::array<float, kNumActions> policy = {};
   // Child visit counts (in policy order)
   std::array<int, kNumActions> child_visit_counts = {};
+  // Child average values (in policy order)
+  std::array<float, kNumActions> child_values = {};
   // Value of current move (as predicted by the model)
   float value = 0.0f;
   // Final value (will be set at the end of the game)

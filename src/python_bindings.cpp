@@ -42,6 +42,7 @@ PYBIND11_MODULE(min_alpha_zero, m) {
       .def_readwrite("model_path", &alphazero::Config::model_path)
       .def_readwrite("training_file", &alphazero::Config::training_file)
       .def_readwrite("debug", &alphazero::Config::debug)
+      .def_readwrite("moves_limit", &alphazero::Config::moves_limit)
       .def_readwrite("temperature", &alphazero::Config::temperature);
 
   // Node class

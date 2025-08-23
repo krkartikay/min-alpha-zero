@@ -54,6 +54,12 @@ void Game::selfPlay(int game_id) {
   int moves_played = 0;
   move_list.clear();
   while (!is_game_over) {
+    if (moves_played >= g_config.moves_limit) {
+      LOG(INFO) << absl::StrFormat(
+          "Game %d reached move limit of %d. Ending game.", game_id,
+          g_config.moves_limit);
+      break;
+    }
     // Select move by running N simulations
     int action = selectMove();
 
@@ -104,6 +110,7 @@ void Game::saveGameState() {
   history.back().policy = root->policy;
   history.back().value = root->value;
   history.back().child_visit_counts = root->child_visits;
+  history.back().child_values = root->child_values;
 }
 
 void Game::updateGameHistory() {
@@ -299,11 +306,12 @@ void Game::appendToTrainingFile() const {
   std::ofstream out(g_config.training_file, std::ios::binary | std::ios::app);
   if (!out) throw std::runtime_error("open failed: " + g_config.training_file);
 
-  for (const auto& s : history) {
+  for (const alphazero::GameState& s : history) {
     write_bin(out, s.board_tensor);
     write_bin(out, s.legal_mask);
     write_bin(out, s.policy);
     write_bin(out, s.child_visit_counts);
+    write_bin(out, s.child_values);
     write_bin(out, s.value);
     write_bin(out, s.final_value);
   }
@@ -316,7 +324,7 @@ void Game::writeGameToLog(int game_id) const {
   // Determine game result from final_value
   std::string result;
   int final_value = history.empty() ? 0 : history[0].final_value;
-  bool game_incomplete = move_list.size() >= 100;  // Hit move limit
+  bool game_incomplete = !root->is_leaf;  // Hit move limit
 
   if (game_incomplete) {
     result = "*";

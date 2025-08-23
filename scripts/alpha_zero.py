@@ -55,6 +55,12 @@ def main():
         action="store_true",
         help="Enable debug mode to dump game tree to file after each move",
     )
+    parser.add_argument(
+        "--moves_limit",
+        type=int,
+        default=100,
+        help="Maximum number of moves per game",
+    )
 
     args = parser.parse_args()
 
