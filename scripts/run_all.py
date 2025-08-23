@@ -9,7 +9,8 @@ from train import main as train_main
 
 NUM_SIMULATIONS = 1000
 NUM_GAMES_EVAL = 10
-NUM_GAMES_SELFPLAY = 1000
+NUM_GAMES_SELFPLAY = 10
+NUM_THREADS = 10
 
 
 def setup_config():
@@ -31,6 +32,7 @@ def run_model_eval():
     print("=" * 50)
     config = maz.get_config()
     config.num_games = NUM_GAMES_EVAL
+    config.num_threads = NUM_THREADS
     agent1 = maz.RawModelAgent()
     agent2 = maz.RandomAgent()
     maz.run_agent_tournament(agent1, agent2)
@@ -42,7 +44,8 @@ def run_self_play():
     print("=" * 50)
     config = maz.get_config()
     config.num_games = NUM_GAMES_SELFPLAY
-    maz.run_worker()
+    config.num_threads = NUM_THREADS
+    maz.run_worker_threads()
 
 
 def run_training():

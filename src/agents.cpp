@@ -119,27 +119,41 @@ void run_agent_tournament(ChessAgent& agent1, ChessAgent& agent2) {
   int total_draws = 0;
   int total_agent2_wins = 0;
 
-  int num_games = g_config.num_games;
+  LOG(INFO) << absl::StrFormat(
+      "Starting tournament: %s vs %s (%d threads * %d games)", agent1.name(),
+      agent2.name(), g_config.num_threads, g_config.num_games);
 
-  LOG(INFO) << absl::StrFormat("Starting tournament: %s vs %s (%d games)",
-                               agent1.name(), agent2.name(), num_games);
-
-  std::vector<GameResult> results(num_games);
-
+  std::vector<GameResult> results;
   boost::fibers::mutex results_mutex;
-  std::vector<boost::fibers::fiber> fibers;
-  for (int i = 0; i < num_games; ++i) {
-    fibers.emplace_back([i, &results, &agent1, &agent2]() {
-      auto result = alphazero::play_agent_vs_agent(agent1, agent2, i);
-      results[i] = result;
-      LOG(INFO) << absl::StrFormat("Game %d: %s", i + 1,
-                                   result.agent_wins ? agent1.name() + " wins"
-                                   : result.draws    ? "Draw"
-                                                     : agent2.name() + " wins");
+  std::vector<std::thread> threads;
+  for (int t = 0; t < g_config.num_threads; t++) {
+    threads.emplace_back([t, &results, &results_mutex, &agent1, &agent2]() {
+      std::vector<boost::fibers::fiber> fibers;
+
+      for (int i = t; i < g_config.num_games; i++) {
+        fibers.emplace_back([i, &results, &results_mutex, &agent1, &agent2]() {
+          alphazero::GameResult result =
+              alphazero::play_agent_vs_agent(agent1, agent2, i);
+          {
+            std::lock_guard lock(results_mutex);
+            results.push_back(result);
+          }
+          LOG(INFO) << absl::StrFormat(
+              "Game %d: %s", i + 1,
+              result.agent_wins ? agent1.name() + " wins"
+              : result.draws    ? "Draw"
+                                : agent2.name() + " wins");
+        });
+      }
+
+      for (auto& fiber : fibers) {
+        fiber.join();
+      }
     });
   }
-  for (auto& f : fibers) {
-    f.join();
+
+  for (auto& thread : threads) {
+    thread.join();
   }
 
   for (const auto& result : results) {
@@ -150,6 +164,7 @@ void run_agent_tournament(ChessAgent& agent1, ChessAgent& agent2) {
   }
 
   LOG(INFO) << "Tournament results:";
+  int num_games = g_config.num_games * g_config.num_threads;
   LOG(INFO) << absl::StrFormat("  Games played: %d", num_games);
   LOG(INFO) << absl::StrFormat("  %s wins: %d (%.1f%%)", agent1.name(),
                                total_agent1_wins,
