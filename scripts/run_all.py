@@ -60,7 +60,6 @@ def main():
 
     setup_config()
     maz.init_globals()
-    maz.init_model()
     maz.start_evaluator_thread()
 
     while True:
@@ -68,6 +67,7 @@ def main():
         print(f"ITERATION {iteration}")
         print(f"{'#'*60}")
 
+        maz.init_model()
         run_model_eval()
         run_self_play()
         run_training()
