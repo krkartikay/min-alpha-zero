@@ -8,7 +8,7 @@ import min_alpha_zero as maz
 from train import main as train_main
 
 from analyze_logits import plot_logits_comparison as logits_main
-from test.mate_in_one import test_mate_in_one as visualize_main
+from visualize import visualize as visualize_main
 
 NUM_SIMULATIONS = 100
 NUM_GAMES_EVAL = 10

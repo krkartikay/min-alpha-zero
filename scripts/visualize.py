@@ -46,7 +46,7 @@ def index_to_coordinates(i):
     return x_all, y_all
 
 
-def test_mate_in_one():
+def visualize():
     # Load the model
     model = "model.pt" if (len(sys.argv) != 2 or not sys.argv[1]) else sys.argv[1]
     model = torch.jit.load(model)
@@ -192,4 +192,4 @@ def test_mate_in_one():
 
 
 if __name__ == "__main__":
-    test_mate_in_one()
+    visualize()
