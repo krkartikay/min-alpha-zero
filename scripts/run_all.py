@@ -59,26 +59,21 @@ def run_training():
 
 
 def main():
-    iteration = 1
-
     setup_config()
     maz.init_globals()
     maz.start_evaluator_thread()
 
-    while True:
-        print(f"\n{'#'*60}")
-        print(f"ITERATION {iteration}")
-        print(f"{'#'*60}")
+    print(f"\n{'#'*60}")
+    print(f"STARTING FULL ITERATION")
+    print(f"{'#'*60}")
 
-        maz.init_model()
-        run_model_eval()
-        run_self_play()
-        run_training()
+    maz.init_model()
+    run_model_eval()
+    run_self_play()
+    run_training()
 
-        visualize_main()
-        logits_main()
-
-        iteration += 1
+    visualize_main()
+    logits_main()
 
 
 if __name__ == "__main__":
