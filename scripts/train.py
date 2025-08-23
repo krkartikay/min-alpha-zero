@@ -64,7 +64,15 @@ def main():
 
     # Dataset and DataLoader
     dataset = TrainingDataset("training_data.bin")
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    dataloader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=max(1, os.cpu_count() // 2),
+        pin_memory=True,
+        persistent_workers=True,
+        prefetch_factor=4,
+    )
 
     # Load model
     model = torch.jit.load("model.pt").to(device)

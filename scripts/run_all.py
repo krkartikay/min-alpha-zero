@@ -63,7 +63,6 @@ def main():
 
     setup_config()
     maz.init_globals()
-    maz.start_evaluator_thread()
 
     while True:
         print(f"\n{'#'*60}")
@@ -71,8 +70,10 @@ def main():
         print(f"{'#'*60}")
 
         maz.init_model()
+        maz.start_evaluator_thread()
         run_model_eval()
         run_self_play()
+        maz.stop_evaluator()
         run_training()
 
         visualize_main()
