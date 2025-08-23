@@ -139,6 +139,7 @@ PYBIND11_MODULE(min_alpha_zero, m) {
   m.def("run_evaluator", &alphazero::run_evaluator);
   m.def("init_model", &alphazero::init_model);
   m.def("run_worker", &alphazero::run_worker);
+  m.def("run_worker_threads", &alphazero::run_worker_threads);
   m.def("play_agent_vs_agent", &alphazero::play_agent_vs_agent);
   m.def("run_agent_tournament", &alphazero::run_agent_tournament);
   m.def("dump_game_tree_to_file", &alphazero::dump_game_tree_to_file,

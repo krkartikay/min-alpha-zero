@@ -31,6 +31,17 @@ void run_worker() {
   }
 }
 
+// Starts multiple worker threads as specified by g_config.num_threads
+void run_worker_threads() {
+  std::vector<std::thread> threads;
+  for (int i = 0; i < g_config.num_threads; ++i) {
+    threads.emplace_back(run_worker);
+  }
+  for (auto& t : threads) {
+    t.join();
+  }
+}
+
 // -----------------------------------------------------------
 
 // Self play logic

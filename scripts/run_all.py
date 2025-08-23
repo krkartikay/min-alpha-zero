@@ -9,7 +9,7 @@ from train import main as train_main
 
 NUM_SIMULATIONS = 1000
 NUM_GAMES_EVAL = 10
-NUM_GAMES_SELFPLAY = 100
+NUM_GAMES_SELFPLAY = 1000
 
 
 def setup_config():

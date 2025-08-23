@@ -51,16 +51,16 @@ inline bool g_stop_evaluator = false;
 
 class Config {
  public:
-  int channel_size;
-  int num_simulations;
-  int batch_size;
-  int num_games;
-  int num_threads;
-  duration_t eval_timeout;
-  std::string model_path;
-  std::string training_file;
+  int channel_size = 128;
+  int num_simulations = 100;
+  int batch_size = 1000;
+  int num_games = 100;
+  int num_threads = 1;
+  duration_t eval_timeout = 1ms;
+  std::string model_path = "model.pt";
+  std::string training_file = "training_data.bin";
   bool debug = false;
-  float temperature = 1.0;
+  float temperature = 1.0f;
 };
 
 inline Config g_config;
@@ -156,6 +156,7 @@ void process_batch(std::vector<eval_request_t> nodes);
 // Worker thread---------------------------------------------
 
 void run_worker();
+void run_worker_threads();
 
 // Agents -----------------------------------------------------
 
