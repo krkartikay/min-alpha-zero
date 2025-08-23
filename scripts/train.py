@@ -53,7 +53,7 @@ def get_next_model_path(out_dir="out"):
 
 def main():
     # Hyperparameters
-    batch_size = 32
+    batch_size = 1
     lr = 3e-4
     epochs = 5
     l2_weight = 1e-4  # L2 regularization weight
@@ -63,7 +63,7 @@ def main():
 
     # Dataset and DataLoader
     dataset = TrainingDataset("training_data.bin")
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
     # Load model
     model = torch.jit.load("model.pt").to(device)
@@ -88,18 +88,32 @@ def main():
             masked_log_probs = masked_log_softmax(policy_logits, legal_mask, dim=1)
 
             # Normalize child_visit_counts to get target policy
-            target_policy = child_visit_counts / (
-                child_visit_counts.sum(dim=1, keepdim=True) + 1e-8
+            child_visit_counts_sum = child_visit_counts.sum(dim=1, keepdim=True)
+            valid_rows = (child_visit_counts_sum > 0).squeeze(1)
+
+            # Normalize only valid rows
+            target_policy = torch.zeros_like(child_visit_counts)
+            target_policy[valid_rows] = (
+                child_visit_counts[valid_rows] / child_visit_counts_sum[valid_rows]
             )
 
+            # Compute per-row loss
             # Policy loss: KL(target || model) == -sum target * log_probs + const
-            policy_loss = -(masked_log_probs * target_policy).sum(dim=1).mean()
+            row_loss = -(masked_log_probs * target_policy).sum(dim=1)
+
+            # Average only over valid rows
+            policy_loss = row_loss[valid_rows].sum()
 
             # MSE loss for value prediction
             value_loss = F.mse_loss(value_pred.squeeze(-1), final_value)
 
             # Total loss
             loss = policy_loss + value_loss
+
+            # Assert target policy is positive only where legal mask is true
+            assert (
+                target_policy[~legal_mask] == 0
+            ).all(), "Target policy must be positive only where legal mask is true"
 
             optimizer.zero_grad()
             loss.backward()

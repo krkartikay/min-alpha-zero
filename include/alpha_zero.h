@@ -48,6 +48,7 @@ constexpr int kInputSize = 7 * 8 * 8;
 
 inline std::unique_ptr<eval_channel_t> g_evaluation_queue;
 inline bool g_stop_evaluator = false;
+inline boost::fibers::mutex g_file_mutex;
 
 class Config {
  public:

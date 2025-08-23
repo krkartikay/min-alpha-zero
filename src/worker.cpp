@@ -92,8 +92,11 @@ void Game::selfPlay(int game_id) {
 
   // At the end of the game note final winner and write to training file.
   updateGameHistory();
-  appendToTrainingFile();
-  writeGameToLog(game_id);
+  {
+    std::lock_guard<boost::fibers::mutex> lock(g_file_mutex);
+    appendToTrainingFile();
+    writeGameToLog(game_id);
+  }
   LOG(INFO) << absl::StrFormat(
       "Game finished. Moves played: %d, Final value: %d", moves_played,
       history[0].final_value);
