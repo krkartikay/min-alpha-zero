@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 import torch.optim as optim
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
 import os
 import re
 import sys  # Added for logging
@@ -53,7 +54,7 @@ def get_next_model_path(out_dir="out"):
 
 def main():
     # Hyperparameters
-    batch_size = 32
+    batch_size = 16
     lr = 3e-4
     epochs = 10
     l2_weight = 1e-4  # L2 regularization weight
@@ -63,12 +64,14 @@ def main():
 
     # Dataset and DataLoader
     dataset = TrainingDataset("training_data.bin")
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
     # Load model
     model = torch.jit.load("model.pt").to(device)
     model.train()
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=l2_weight)
+    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=l2_weight)
+
+    losses = []
 
     print("Starting training...")
     for epoch in range(epochs):
@@ -128,6 +131,21 @@ def main():
 
         avg_loss = total_loss / len(dataset)
         print(f"Epoch {epoch+1}/{epochs} - Avg Loss: {avg_loss:.4f}")
+
+        # Accumulate epoch losses
+        losses.append(float(avg_loss))
+
+    # After training, save loss plot
+    plt.figure()
+    epochs_range = list(range(1, len(losses) + 1))
+    plt.plot(epochs_range, losses, marker="o")
+    plt.xlabel("Epoch")
+    plt.ylabel("Avg Loss")
+    plt.title("Training Loss")
+    plt.grid(True)
+    plt.savefig("loss_plot.png")
+    plt.close()
+    print("Saved loss plot to loss_plot.png")
 
     # Save model after training
     save_path = get_next_model_path("out")
