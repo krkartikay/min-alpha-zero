@@ -33,7 +33,7 @@ def run_model_eval():
     config = maz.get_config()
     config.num_games = NUM_GAMES_EVAL
     config.num_threads = NUM_THREADS
-    agent1 = maz.RawModelAgent()
+    agent1 = maz.MCTSAgent()
     agent2 = maz.RandomAgent()
     maz.run_agent_tournament(agent1, agent2)
 

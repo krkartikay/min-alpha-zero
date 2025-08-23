@@ -55,7 +55,7 @@ def main():
     # Hyperparameters
     batch_size = 16
     lr = 3e-4
-    epochs = 5
+    epochs = 10
     l2_weight = 1e-4  # L2 regularization weight
 
     # Device
