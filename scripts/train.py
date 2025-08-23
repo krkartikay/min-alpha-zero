@@ -53,7 +53,7 @@ def get_next_model_path(out_dir="out"):
 
 def main():
     # Hyperparameters
-    batch_size = 16
+    batch_size = 32
     lr = 3e-4
     epochs = 10
     l2_weight = 1e-4  # L2 regularization weight
