@@ -53,7 +53,7 @@ def get_next_model_path(out_dir="out"):
 
 def main():
     # Hyperparameters
-    batch_size = 1
+    batch_size = 16
     lr = 3e-4
     epochs = 5
     l2_weight = 1e-4  # L2 regularization weight
@@ -102,7 +102,7 @@ def main():
             row_loss = -(masked_log_probs * target_policy).sum(dim=1)
 
             # Average only over valid rows
-            policy_loss = row_loss[valid_rows].sum()
+            policy_loss = row_loss[valid_rows].mean()
 
             # MSE loss for value prediction
             value_loss = F.mse_loss(value_pred.squeeze(-1), final_value)
