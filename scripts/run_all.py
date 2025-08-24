@@ -64,13 +64,13 @@ def main():
     matplotlib.use('Agg')
     setup_config()
     maz.init_globals()
+    maz.init_model()
     maz.start_evaluator_thread()
 
     print(f"\n{'#'*60}")
     print(f"STARTING FULL ITERATION")
     print(f"{'#'*60}")
 
-    maz.init_model()
     run_model_eval()
     run_self_play()
     run_training()
