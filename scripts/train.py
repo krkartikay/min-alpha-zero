@@ -57,7 +57,7 @@ def main():
     batch_size = 32
     lr = 3e-4
     l2_weight = 1e-4  # L2 regularization weight
-    min_improvement = 0.00001  # Minimum improvement to continue training (0.001%)
+    min_improvement = 0.0001  # Minimum improvement to continue training (0.01%)
 
     # Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
