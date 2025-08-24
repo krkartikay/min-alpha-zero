@@ -147,6 +147,10 @@ def main():
 
         # Accumulate epoch losses
         losses.append(float(avg_loss))
+
+        if epoch < 10:  # at least run 10 epochs
+            continue
+
         # Check improvement vs. previous epoch
         if prev_loss < float("inf"):
             improvement = (prev_loss - avg_loss) / prev_loss
