@@ -22,7 +22,6 @@ void run_worker() {
     fibers.emplace_back([i]() {
       Game game;
       game.selfPlay(i);
-      LOG(INFO) << absl::StrFormat("Game %d finished.", i);
     });
   }
   // Join all fibers
@@ -55,9 +54,6 @@ void Game::selfPlay(int game_id) {
   move_list.clear();
   while (!is_game_over) {
     if (moves_played >= g_config.moves_limit) {
-      LOG(INFO) << absl::StrFormat(
-          "Game %d reached move limit of %d. Ending game.", game_id,
-          g_config.moves_limit);
       break;
     }
     // Select move by running N simulations
@@ -98,8 +94,8 @@ void Game::selfPlay(int game_id) {
     writeGameToLog(game_id);
   }
   LOG(INFO) << absl::StrFormat(
-      "Game finished. Moves played: %d, Final value: %d", moves_played,
-      history[0].final_value);
+      "Game %d finished. Moves played: %d, Final value: %d", game_id,
+      moves_played, history[0].final_value);
 }
 
 void Game::updateRoot(int action) {
