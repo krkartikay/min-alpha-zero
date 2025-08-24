@@ -1,3 +1,4 @@
+from pdb import run
 import torch
 from torch.utils.data import DataLoader
 import torch.optim as optim
@@ -83,6 +84,7 @@ def main():
 
     print("Starting training...")
     epoch = 0
+    run_more_epochs = 3
     prev_loss = float("inf")
     while True:
         epoch += 1
@@ -151,6 +153,8 @@ def main():
             print(f"Loss Improvement: {improvement:.2%}")
             if improvement < min_improvement:
                 print(f"Stopping: improvement {improvement:.2%} < {min_improvement:.2%}")
+                run_more_epochs -= 1
+            if run_more_epochs <= 0:
                 break
         prev_loss = avg_loss
 
