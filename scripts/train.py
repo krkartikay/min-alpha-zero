@@ -55,8 +55,8 @@ def get_next_model_path(out_dir="out"):
 
 def main():
     # Hyperparameters
-    batch_size = 16
-    lr = 3e-4
+    batch_size = 512
+    lr = 1e-3
     l2_weight = 1e-4  # L2 regularization weight
     min_improvement = 0.0001  # Minimum improvement to continue training (0.01%)
 
