@@ -6,45 +6,7 @@ import chess.svg
 import numpy as np
 import matplotlib.pyplot as plt
 import cairosvg
-
-
-def board_to_tensor(board):
-    """Convert chess board to tensor format matching chess_utils.hpp"""
-    tensor = np.zeros((7, 8, 8), dtype=np.float32)
-
-    # Convert piece positions
-    for square in chess.SQUARES:
-        piece = board.piece_at(square)
-        if piece:
-            file = chess.square_file(square)
-            rank = chess.square_rank(square)
-            piece_type = piece.piece_type - 1  # 0-based indexing
-            color = 1.0 if piece.color == chess.WHITE else -1.0
-            tensor[piece_type, rank, file] = color
-
-    # Add turn channel (channel 6)
-    turn_value = 1.0 if board.turn == chess.WHITE else -1.0
-    tensor[6, :, :] = turn_value
-
-    return tensor
-
-
-def move_to_int(move):
-    """Convert move to integer format matching chess_utils.hpp"""
-    return move.from_square * 64 + move.to_square
-
-
-def index_to_coordinates(i):
-    """Map policy index to coordinates in the 64x64 grid."""
-    from_sq = i // 64
-    to_sq = i % 64
-    x_big = from_sq // 8
-    y_big = from_sq % 8
-    x_small = to_sq // 8
-    y_small = to_sq % 8
-    x_all = x_big * 8 + x_small
-    y_all = y_big * 8 + y_small
-    return x_all, y_all
+from chess_utils import board_to_tensor, move_to_int, index_to_coordinates
 
 
 def visualize():
