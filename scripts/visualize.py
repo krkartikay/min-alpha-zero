@@ -1,4 +1,5 @@
 import sys
+import matplotlib
 import torch
 import chess
 import chess.svg
@@ -169,6 +170,57 @@ def visualize():
         "Board with top 5 move arrows saved as 'mate_in_one_board_with_arrows.png' and .svg"
     )
 
+    # Evaluate child positions using value head
+    move_values = []
+    child_tensors = []
+    for move in legal_moves:
+        child_board = board.copy()
+        child_board.push(move)
+        child_tensor = board_to_tensor(child_board)
+        child_tensors.append(torch.tensor(child_tensor).unsqueeze(0).to(device))
+    
+    # Batch evaluate all child positions
+    if child_tensors:
+        child_batch = torch.cat(child_tensors, dim=0)
+        with torch.no_grad():
+            _, child_values = model(child_batch)
+        child_values = child_values.squeeze()
+        
+        # For opponent's turn, negate values (what's good for them is bad for us)
+        if not board.turn:  # If it was black's turn originally, children are white's turn
+            child_values = -child_values
+        
+        move_values = list(zip(legal_moves, child_values.cpu().numpy()))
+        move_values.sort(key=lambda x: x[1], reverse=True)
+        
+        print("\nTop 10 moves by child position value:")
+        for i, (move, value) in enumerate(move_values[:10]):
+            print(f"{i+1:2d}. {move}: {value:.6f}")
+        
+        # Create board with arrows for top value moves
+        value_arrows = []
+        max_val = move_values[0][1]
+        min_val = move_values[-1][1] if len(move_values) > 1 else max_val
+        val_range = max_val - min_val if max_val != min_val else 1.0
+        
+        for i, (move, value) in enumerate(move_values[:20]):
+            # Normalize opacity based on value ranking
+            opacity = 0.7 * (value - min_val) / val_range
+            rgba_color = f"rgba(100, 0, 60, {opacity})"
+            value_arrows.append(
+                chess.svg.Arrow(move.from_square, move.to_square, color=rgba_color)
+            )
+        
+        board_with_value_arrows_svg = chess.svg.board(board, arrows=value_arrows, size=400)
+        
+        with open("mate_in_one_board_with_value_arrows.svg", "w") as f:
+            f.write(board_with_value_arrows_svg)
+        
+        png_data = cairosvg.svg2png(bytestring=board_with_value_arrows_svg.encode("utf-8"))
+        with open("mate_in_one_board_with_value_arrows.png", "wb") as f:
+            f.write(png_data)
+        print("Board with top value moves saved as 'mate_in_one_board_with_value_arrows.png' and .svg")
+
     # Check if the mate move (Qxf7#) is highly ranked
     mate_move = chess.Move.from_uci("h5f7")
     if mate_move in legal_moves:
@@ -176,17 +228,29 @@ def visualize():
         mate_prob = policy_probs[0, mate_idx].item()
         print(f"\nMate move Qxf7# probability: {mate_prob:.4f}")
 
-        # Check if it's the top move
+        # Check if it's the top move by policy
         best_move_idx = legal_move_indices[
             np.argmax([policy_probs[0, idx].item() for idx in legal_move_indices])
         ]
         best_move = legal_moves[legal_move_indices.index(best_move_idx)]
-        print(f"Model's top choice: {best_move}")
+        print(f"Model's top choice (policy): {best_move}")
 
         if best_move == mate_move:
-            print("SUCCESS: Model correctly identifies the mate in one!")
+            print("SUCCESS: Model correctly identifies the mate in one (policy)!")
         else:
-            print("Model did not identify the mate move as best")
+            print("Model did not identify the mate move as best (policy)")
+        
+        # Check value head ranking
+        if move_values:
+            mate_value = next((val for move, val in move_values if move == mate_move), None)
+            best_value_move = move_values[0][0]
+            print(f"Mate move value: {mate_value:.6f}")
+            print(f"Model's top choice (value): {best_value_move}")
+            
+            if best_value_move == mate_move:
+                print("SUCCESS: Model correctly identifies the mate in one (value)!")
+            else:
+                print("Model did not identify the mate move as best (value)")
     else:
         print("ERROR: Mate move not in legal moves")
 

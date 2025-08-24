@@ -4,11 +4,13 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import matplotlib
 import min_alpha_zero as maz
 from train import main as train_main
 
 from analyze_logits import plot_logits_comparison as logits_main
 from visualize import visualize as visualize_main
+from opening_analysis import plot_opening_frequencies as opening_analysis_main
 
 NUM_SIMULATIONS = 100
 NUM_GAMES_EVAL = 10
@@ -59,6 +61,7 @@ def run_training():
 
 
 def main():
+    matplotlib.use('Agg')
     setup_config()
     maz.init_globals()
     maz.start_evaluator_thread()
@@ -68,12 +71,13 @@ def main():
     print(f"{'#'*60}")
 
     maz.init_model()
-    # run_model_eval()
+    run_model_eval()
     run_self_play()
     run_training()
 
     visualize_main()
     logits_main()
+    opening_analysis_main()
 
 
 if __name__ == "__main__":

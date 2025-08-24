@@ -37,7 +37,7 @@ std::vector<eval_request_t> get_requests_batch() {
     if (status == channel_op_status::success) {
       req_batch.push_back(std::move(req));
     } else if (status == channel_op_status::timeout) {
-      break;  // Timeout reached, exit the loop
+      break; // Timeout reached, exit the loop
     }
   }
   return req_batch;
@@ -50,34 +50,47 @@ void process_batch(std::vector<eval_request_t> nodes) {
   metrics::Increment("positions_evaluated", batch_size);
   torch::Tensor input = torch::empty({int(batch_size), 7, 8, 8},
                                      torch::TensorOptions().dtype(torch::kF32));
+  torch::Tensor legal_mask =
+      torch::empty({int(batch_size), kNumActions},
+                   torch::TensorOptions().dtype(torch::kBool));
 
   // Convert boards to tensors and copy
   for (size_t i = 0; i < batch_size; ++i) {
     std::array<float, kInputSize> buf = board_to_tensor(nodes[i].first->board);
     std::memcpy(input[i].data_ptr(), buf.data(), kInputSize * sizeof(float));
+    std::memcpy(legal_mask[i].data_ptr(), nodes[i].first->legal_mask.data(),
+                kNumActions * sizeof(bool));
   }
 
   // Move input to CUDA and run the model
   auto input_cuda = input.to(torch::kCUDA);
+  auto legal_mask_cuda = legal_mask.to(torch::kCUDA);
   auto output = g_model.forward({input_cuda});
 
   // The model output is a tuple of (policy, value) batched tensors
   auto output_tuple = output.toTuple();
-  auto policy_batch = output_tuple->elements()[0].toTensor().to(torch::kCPU);
-  auto value_batch = output_tuple->elements()[1].toTensor().to(torch::kCPU);
+  auto policy_batch = output_tuple->elements()[0].toTensor();
+  auto value_batch = output_tuple->elements()[1].toTensor();
 
   // Convert logits to probabilities using softmax
-  policy_batch = torch::softmax(policy_batch, 1);
+  // IMPORTANT! need to apply legal move mask before doing this!
+  // Node constructor already sets node->legal_mask.
+  // Note: for leaf nodes this could make the policy all NaNs
+  const float neg_inf = -1e10;
+  torch::Tensor masked_logits =
+      policy_batch.masked_fill(~legal_mask_cuda, neg_inf);
+  torch::Tensor policy_probs = torch::softmax(masked_logits, 1);
+  torch::Tensor policy_probs_cpu = policy_probs.to(torch::kCPU);
 
   // Copy results back to nodes and signal completion
   for (size_t i = 0; i < nodes.size(); ++i) {
-    auto& [node, p] = nodes[i];
+    auto &[node, p] = nodes[i];
     node->value = value_batch[i].item<float>();
-    std::memcpy(node->policy.data(), policy_batch[i].data_ptr(),
+    std::memcpy(node->policy.data(), policy_probs_cpu[i].data_ptr(),
                 kNumActions * sizeof(float));
     node->is_evaluated = true;
     p.set_value();
   }
 }
 
-}  // namespace alphazero
+} // namespace alphazero
