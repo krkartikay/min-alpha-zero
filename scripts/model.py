@@ -13,16 +13,17 @@ class ChessModel(nn.Module):
         self.conv_blocks.append(self._make_conv_block(7, 128))
 
         # 7 more conv blocks (8 total)
-        for _ in range(7):
+        # only one conv block for now!
+        for _ in range(1):
             self.conv_blocks.append(self._make_conv_block(128, 128))
 
         # Policy head
         self.policy_head = nn.Sequential(
-            nn.Conv2d(128, 32, kernel_size=1),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(128, 8, kernel_size=1),
+            nn.BatchNorm2d(8),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(32 * 8 * 8, 64 * 64),
+            nn.Linear(8 * 8 * 8, 64 * 64),
         )
 
         # Value head
