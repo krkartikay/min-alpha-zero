@@ -199,11 +199,12 @@ def visualize():
         
         # Create board with arrows for top value moves
         value_arrows = []
-        max_val = move_values[0][1]
-        min_val = move_values[-1][1] if len(move_values) > 1 else max_val
+        top_20_move_vals = move_values[:20]
+        max_val = top_20_move_vals[0][1]
+        min_val = top_20_move_vals[-1][1] if len(top_20_move_vals) > 1 else max_val
         val_range = max_val - min_val if max_val != min_val else 1.0
-        
-        for i, (move, value) in enumerate(move_values[:20]):
+
+        for i, (move, value) in enumerate(top_20_move_vals):
             # Normalize opacity based on value ranking
             opacity = 0.7 * (value - min_val) / val_range
             rgba_color = f"rgba(100, 0, 60, {opacity})"
