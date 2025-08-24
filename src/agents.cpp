@@ -130,7 +130,7 @@ void run_agent_tournament(ChessAgent& agent1, ChessAgent& agent2) {
     threads.emplace_back([t, &results, &results_mutex, &agent1, &agent2]() {
       std::vector<boost::fibers::fiber> fibers;
 
-      for (int i = t; i < g_config.num_games; i++) {
+      for (int i = 0; i < g_config.num_games; i++) {
         fibers.emplace_back([i, &results, &results_mutex, &agent1, &agent2]() {
           alphazero::GameResult result =
               alphazero::play_agent_vs_agent(agent1, agent2, i);
