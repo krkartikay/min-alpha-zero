@@ -79,6 +79,8 @@ def main():
     logits_main()
     opening_analysis_main()
 
+    maz.stop_evaluator()
+
 
 if __name__ == "__main__":
     main()
