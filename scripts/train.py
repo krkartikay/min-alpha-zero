@@ -58,6 +58,7 @@ def main():
     lr = 3e-4
     epochs = 5
     l2_weight = 1e-4  # L2 regularization weight
+    min_improvement = 0.0001  # Minimum improvement to continue training
 
     # Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -82,7 +83,10 @@ def main():
     losses = []
 
     print("Starting training...")
-    for epoch in range(epochs):
+    epoch = 0
+    prev_loss = float("inf")
+    while True:
+        epoch += 1
         total_loss = 0.0
         for i, batch in enumerate(dataloader):
             board_tensor = batch["board_tensor"].to(device)  # (B, 7, 8, 8)
@@ -138,10 +142,18 @@ def main():
                 )
 
         avg_loss = total_loss / len(dataset)
-        print(f"Epoch {epoch+1}/{epochs} - Avg Loss: {avg_loss:.4f}")
+        print(f"Epoch {epoch+1} - Avg Loss: {avg_loss:.4f}")
 
         # Accumulate epoch losses
         losses.append(float(avg_loss))
+        # Check improvement vs. previous epoch
+        if prev_loss < float("inf"):
+            improvement = (prev_loss - avg_loss) / prev_loss
+            print(f"Loss Improvement: {improvement:.2%}")
+            if improvement < min_improvement:
+                print(f"Stopping: improvement {improvement:.2%} < {min_improvement:.2%}")
+                break
+        prev_loss = avg_loss
 
     # After training, save loss plot
     plt.figure()

@@ -46,6 +46,9 @@ std::vector<eval_request_t> get_requests_batch() {
 void process_batch(std::vector<eval_request_t> nodes) {
   // Copy Tensors into a single batch tensor
   const size_t batch_size = nodes.size();
+  if (batch_size == 0) {
+    return;
+  }
   metrics::Increment("batch_evaluations");
   metrics::Increment("positions_evaluated", batch_size);
   torch::Tensor input = torch::empty({int(batch_size), 7, 8, 8},
