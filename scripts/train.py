@@ -141,7 +141,7 @@ def main():
                 loss.backward()
                 optimizer.step()
 
-                total_loss += loss.item()
+                total_loss += loss.item() * board_tensor_mb.size(0)  # Accumulate total loss
 
             if (i + 1) % 100 == 0:
                 print(
