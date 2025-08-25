@@ -59,6 +59,8 @@ def main():
     lr = 3e-4
     l2_weight = 1e-4  # L2 regularization weight
     min_improvement = 0.0001  # Minimum improvement to continue training (0.01%)
+    run_more_epochs = 10
+    micro_batch_size = 16
 
     # Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -84,62 +86,67 @@ def main():
 
     print("Starting training...")
     epoch = 0
-    run_more_epochs = 3
     prev_loss = float("inf")
     while True:
         epoch += 1
         total_loss = 0.0
         for i, batch in enumerate(dataloader):
-            board_tensor = batch["board_tensor"].to(device)  # (B, 7, 8, 8)
-            legal_mask = batch["legal_mask"].to(device)  # (B, 4096)
+            board_tensor = batch["board_tensor"].to(device, non_blocking=True)  # (B, 7, 8, 8)
+            legal_mask = batch["legal_mask"].to(device, non_blocking=True)  # (B, 4096)
             child_visit_counts = (
-                batch["child_visit_counts"].float().to(device)
+                batch["child_visit_counts"].float().to(device, non_blocking=True)
             )  # (B, 4096)
-            final_value = batch["final_value"].float().to(device)  # (B,)
+            final_value = batch["final_value"].float().to(device, non_blocking=True)  # (B,)
 
-            # Forward pass
-            policy_logits, value_pred = model(board_tensor)
+            for k in range(0, board_tensor.shape[0], micro_batch_size):
+                idx = slice(k, k+micro_batch_size)
+                board_tensor_mb = board_tensor[idx]
+                legal_mask_mb = legal_mask[idx]
+                child_visit_counts_mb = child_visit_counts[idx]
+                final_value_mb = final_value[idx]
 
-            # Masked log softmax
-            masked_log_probs = masked_log_softmax(policy_logits, legal_mask, dim=1)
+                # Forward pass
+                policy_logits_mb, value_pred_mb = model(board_tensor_mb)
 
-            # Normalize child_visit_counts to get target policy
-            child_visit_counts_sum = child_visit_counts.sum(dim=1, keepdim=True)
-            valid_rows = (child_visit_counts_sum > 0).squeeze(1)
+                # Masked log softmax
+                masked_log_probs_mb = masked_log_softmax(policy_logits_mb, legal_mask_mb, dim=1)
 
-            # Normalize only valid rows
-            target_policy = torch.zeros_like(child_visit_counts)
-            target_policy[valid_rows] = (
-                child_visit_counts[valid_rows] / child_visit_counts_sum[valid_rows]
-            )
+                # Normalize child_visit_counts to get target policy
+                child_visit_counts_sum_mb = child_visit_counts_mb.sum(dim=1, keepdim=True)
+                valid_rows_mb = (child_visit_counts_sum_mb > 0).squeeze(1)
 
-            # Compute per-row loss
-            # Policy loss: KL(target || model) == -sum target * log_probs + const
-            row_loss = -(masked_log_probs * target_policy).sum(dim=1)
+                # Normalize only valid rows
+                target_policy_mb = torch.zeros_like(child_visit_counts_mb)
+                target_policy_mb[valid_rows_mb] = (
+                    child_visit_counts_mb[valid_rows_mb] / child_visit_counts_sum_mb[valid_rows_mb]
+                )
 
-            # Average only over valid rows
-            policy_loss = row_loss[valid_rows].mean()
+                # Compute per-row loss
+                # Policy loss: KL(target || model) == -sum target * log_probs + const
+                row_loss_mb = -(masked_log_probs_mb * target_policy_mb).sum(dim=1)
 
-            # MSE loss for value prediction
-            value_loss = F.mse_loss(value_pred.squeeze(-1), final_value)
+                # Average only over valid rows
+                if valid_rows_mb.any():
+                    policy_loss_mb = row_loss_mb[valid_rows_mb].mean()
+                else:
+                    policy_loss_mb = torch.tensor(0.0, device=device)
+                
+                # MSE loss for value prediction
+                value_loss_mb = F.mse_loss(value_pred_mb.squeeze(-1), final_value_mb)
 
-            # Total loss
-            loss = policy_loss + value_loss
+                # Total loss
+                loss = policy_loss_mb + value_loss_mb
 
-            # Assert target policy is positive only where legal mask is true
-            assert (
-                target_policy[~legal_mask] == 0
-            ).all(), "Target policy must be positive only where legal mask is true"
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+                total_loss += loss.item()
 
-            total_loss += loss.item() * board_tensor.size(0)
             if (i + 1) % 100 == 0:
                 print(
-                    f"Batch {i+1} \t Policy loss: {policy_loss.item():.4f}\t"
-                    f"Value loss: {value_loss.item():.4f}\t Total loss: {loss.item():.4f}"
+                    f"Batch {i+1} \t Policy loss: {policy_loss_mb.item():.4f}\t"
+                    f"Value loss: {value_loss_mb.item():.4f}\t Total loss: {loss.item():.4f}"
                 )
 
         avg_loss = total_loss / len(dataset)
@@ -147,9 +154,6 @@ def main():
 
         # Accumulate epoch losses
         losses.append(float(avg_loss))
-
-        if epoch < 10:  # at least run 10 epochs
-            continue
 
         # Check improvement vs. previous epoch
         if prev_loss < float("inf"):
