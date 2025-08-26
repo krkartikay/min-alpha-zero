@@ -12,7 +12,7 @@ from analyze_logits import plot_logits_comparison as logits_main
 from visualize import visualize as visualize_main
 from opening_analysis import plot_opening_frequencies as opening_analysis_main
 
-NUM_SIMULATIONS = 1000
+NUM_SIMULATIONS = 256
 NUM_GAMES_EVAL = 10
 NUM_GAMES_SELFPLAY = 10
 NUM_THREADS = 20
