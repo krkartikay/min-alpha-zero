@@ -78,7 +78,7 @@ def main():
     use_legal_mask = True
 
     loss_history = []
-    total_steps = 2000  # 2k batches... roughly takes 60s with current model
+    total_steps = 5000
     steps = 0
     epoch = 0
     policy_loss_history = []
