@@ -138,11 +138,11 @@ void run_agent_tournament(ChessAgent& agent1, ChessAgent& agent2) {
             std::lock_guard lock(results_mutex);
             results.push_back(result);
           }
-          LOG(INFO) << absl::StrFormat(
-              "Game %d: %s", i + 1,
-              result.agent_wins ? agent1.name() + " wins"
-              : result.draws    ? "Draw"
-                                : agent2.name() + " wins");
+          // LOG(INFO) << absl::StrFormat(
+          //     "Game %d: %s", i + 1,
+          //     result.agent_wins ? agent1.name() + " wins"
+          //     : result.draws    ? "Draw"
+          //                       : agent2.name() + " wins");
         });
       }
 
