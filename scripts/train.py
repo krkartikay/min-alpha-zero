@@ -118,8 +118,6 @@ def main():
                 print(f"\tBatch {i:4}\tLoss: {loss.item():.4f} (Policy: {policy_loss.item():.4f}, Value: {value_loss.item():.4f})")
             steps += 1
 
-        if steps >= total_steps:
-            break
         total_loss /= len(dataset)
         total_policy_loss /= len(dataset)
         total_value_loss /= len(dataset)
@@ -128,6 +126,9 @@ def main():
         value_loss_history.append(total_value_loss.item())
         epoch += 1
         print(f"Epoch {epoch:2} Step {steps:4}\tLoss: {total_loss.item():.4f} (Policy: {total_policy_loss.item():.4f}, Value: {total_value_loss.item():.4f})")
+
+        if steps >= total_steps:
+            break
 
     # After training, save loss plot
     plt.figure(figsize=(10, 6))
