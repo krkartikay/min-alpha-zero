@@ -1,14 +1,15 @@
-from pdb import run
+import os
+import re
+import sys
 import torch
+import numpy as np
 from torch.utils.data import DataLoader
 import torch.optim as optim
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-import os
-import re
-import sys  # Added for logging
-from datetime import datetime  # Added for timestamps
+from datetime import datetime
 
+from dataset import TrainingDataset
 
 # Redirect print statements to both console and log file
 class Logger:
@@ -30,16 +31,6 @@ class Logger:
 
 sys.stdout = Logger("training.log")
 
-from dataset import TrainingDataset
-import numpy as np
-
-
-def masked_log_softmax(logits, mask, dim=-1):
-    # Set logits to large negative where mask is False
-    mask = mask.bool()
-    logits = logits.masked_fill(~mask, -1e10)
-    return F.log_softmax(logits, dim=dim)
-
 
 def get_next_model_path(out_dir="out"):
     os.makedirs(out_dir, exist_ok=True)
@@ -56,7 +47,7 @@ def get_next_model_path(out_dir="out"):
 def main():
     # Hyperparameters
     batch_size = 512
-    lr = 3e-4
+    lr = 2e-3
     l2_weight = 1e-4  # L2 regularization weight
     min_improvement = 0.0001  # Minimum improvement to continue training (0.01%)
 
@@ -83,85 +74,53 @@ def main():
     losses = []
 
     print("Starting training...")
+    print(f"Dataset size = {len(dataset)} ({len(dataloader)} batches)")
+
+    use_legal_mask = True
+
+    loss_history = []
+    total_steps = 1000  # 1k steps = 1k epochs on 1 batches dataset, 1 epoch on 1k batches dataset
+    steps = 0
     epoch = 0
-    run_more_epochs = 3
-    prev_loss = float("inf")
-    while True:
-        epoch += 1
-        total_loss = 0.0
+    while steps < total_steps:
+        total_loss = torch.tensor(0.).to(device)
         for i, batch in enumerate(dataloader):
-            board_tensor = batch["board_tensor"].to(device)  # (B, 7, 8, 8)
-            legal_mask = batch["legal_mask"].to(device)  # (B, 4096)
-            child_visit_counts = (
-                batch["child_visit_counts"].float().to(device)
-            )  # (B, 4096)
-            final_value = batch["final_value"].float().to(device)  # (B,)
+            x = batch['board_tensor'].to(device)                    # (B, 7, 8, 8)
+            y1 = batch['child_visit_counts'].float().to(device)     # (B, 4096)
+            y2 = batch['final_value'].float().to(device)            # (B,)
+            legal_mask = batch['legal_mask'].to(device)             # (B, 4096), 0/1 or bool
 
-            # Forward pass
-            policy_logits, value_pred = model(board_tensor)
+            policy_logits, value_pred = model(x) # (B, 4096), (B,)
+            if use_legal_mask:
+                policy_logits *= legal_mask
 
-            # Masked log softmax
-            masked_log_probs = masked_log_softmax(policy_logits, legal_mask, dim=1)
+            value_loss = F.mse_loss(value_pred, y2)
 
-            # Normalize child_visit_counts to get target policy
-            child_visit_counts_sum = child_visit_counts.sum(dim=1, keepdim=True)
-            valid_rows = (child_visit_counts_sum > 0).squeeze(1)
+            target_policy = y1 / (y1.sum(dim=1, keepdim=True)  + 1e-6)
 
-            # Normalize only valid rows
-            target_policy = torch.zeros_like(child_visit_counts)
-            target_policy[valid_rows] = (
-                child_visit_counts[valid_rows] / child_visit_counts_sum[valid_rows]
-            )
+            log_probs = F.log_softmax(policy_logits, dim=1)
 
-            # Compute per-row loss
-            # Policy loss: KL(target || model) == -sum target * log_probs + const
-            row_loss = -(masked_log_probs * target_policy).sum(dim=1)
+            log_target_policy = target_policy.clamp(min=1e-12).log()
+            policy_loss = (target_policy * (log_target_policy - log_probs)).sum(dim=1).mean()
 
-            # Average only over valid rows
-            policy_loss = row_loss[valid_rows].mean()
+            loss = value_loss + policy_loss
+            total_loss += loss * x.shape[0]
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            steps += 1
 
-            # MSE loss for value prediction
-            value_loss = F.mse_loss(value_pred.squeeze(-1), final_value)
-
-            # Total loss
-            loss = policy_loss + value_loss
-
-            # Assert target policy is positive only where legal mask is true
-            assert (
-                target_policy[~legal_mask] == 0
-            ).all(), "Target policy must be positive only where legal mask is true"
-
-            total_loss += loss.item() * board_tensor.size(0)
-            if (i + 1) % 100 == 0:
-                print(
-                    f"Batch {i+1} \t Policy loss: {policy_loss.item():.4f}\t"
-                    f"Value loss: {value_loss.item():.4f}\t Total loss: {loss.item():.4f}"
-                )
-
-        avg_loss = total_loss / len(dataset)
-        print(f"Epoch {epoch+1} - Avg Loss: {avg_loss:.4f}")
-
-        # Accumulate epoch losses
-        losses.append(float(avg_loss))
-
-        if epoch < 10:  # at least run 10 epochs
-            continue
-
-        # Check improvement vs. previous epoch
-        if prev_loss < float("inf"):
-            improvement = (prev_loss - avg_loss) / prev_loss
-            print(f"Loss Improvement: {improvement:.2%}")
-            if improvement < min_improvement:
-                print(f"Stopping: improvement {improvement:.2%} < {min_improvement:.2%}")
-                run_more_epochs -= 1
-            if run_more_epochs <= 0:
-                break
-        prev_loss = avg_loss
+        if steps >= total_steps:
+            break
+        total_loss /= len(dataset)
+        loss_history.append(total_loss.item())
+        epoch += 1
+        print(f"Epoch {epoch} Step {steps} Loss: {total_loss.item():.4f}")
 
     # After training, save loss plot
     plt.figure()
-    epochs_range = list(range(1, len(losses) + 1))
-    plt.plot(epochs_range, losses, marker="o")
+    epochs_range = list(range(1, len(loss_history) + 1))
+    plt.plot(epochs_range, loss_history, marker="o")
     plt.xlabel("Epoch")
     plt.ylabel("Avg Loss")
     plt.title("Training Loss")

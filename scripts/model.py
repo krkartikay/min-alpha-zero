@@ -1,61 +1,29 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class ChessModel(nn.Module):
     def __init__(self):
-        super(ChessModel, self).__init__()
-
-        # Input: 7x8x8 (7 channels, 8x8 board)
-        self.conv_blocks = nn.ModuleList()
-
-        # First conv block
-        self.conv_blocks.append(self._make_conv_block(7, 128))
-
-        # 7 more conv blocks (8 total)
-        for _ in range(7):
-            self.conv_blocks.append(self._make_conv_block(128, 128))
-
-        # Policy head
-        self.policy_head = nn.Sequential(
-            nn.Conv2d(128, 32, kernel_size=1),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.Flatten(),
-            nn.Linear(32 * 8 * 8, 64 * 64),
-        )
-
-        # Value head
-        self.value_head = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(128, 1), nn.Tanh()
-        )
-
-    def _make_conv_block(self, in_channels, out_channels):
-        return nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, 3, padding=1),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(),
-            nn.Conv2d(out_channels, out_channels, 3, padding=1),
-            nn.BatchNorm2d(out_channels),
-        )
+        super().__init__()
+        self.conv0 = nn.Conv2d(  7, 64, 3, padding=1)
+        self.flat = nn.Flatten()
+        self.policy_head = nn.Linear(64*8*8, 4096)  # For move distribution (64x64)
+        self.value_head = nn.Linear(64*8*8, 1)      # For scalar value
 
     def forward(self, x):
-        # x shape: (batch_size, 7, 8, 8)
-        identity = None
-
-        for i, block in enumerate(self.conv_blocks):
-            if i == 0:
-                x = block(x)
-                identity = x
-            else:
-                residual = x
-                x = block(x)
-                x = x + residual  # Residual connection
-            x = torch.relu(x)
-
+        x = F.relu(self.conv0(x))
+        x = self.flat(x)
         policy = self.policy_head(x)
-        value = self.value_head(x)
+        value = self.value_head(x).squeeze(-1)
         return policy, value
+
+    def predict(self, x, legal_mask):
+        policy_logits, value = self.forward(x)
+        # Set illegal logits to -1e10 before softmax
+        masked_logits = policy_logits.masked_fill(~legal_mask.bool(), -1e10)
+        probs = F.softmax(masked_logits, dim=1)
+        return probs, value  # (batch, 4096), (batch,)
 
 
 def export_model(model):

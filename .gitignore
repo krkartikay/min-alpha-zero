@@ -33,6 +33,7 @@ env/
 *.txt
 *.png
 *.svg
+core.*
 
 # Model files
 *.pth
