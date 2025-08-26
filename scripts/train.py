@@ -47,9 +47,8 @@ def get_next_model_path(out_dir="out"):
 def main():
     # Hyperparameters
     batch_size = 512
-    lr = 2e-3
+    lr = 1e-3
     l2_weight = 1e-4  # L2 regularization weight
-    min_improvement = 0.0001  # Minimum improvement to continue training (0.01%)
 
     # Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -79,11 +78,16 @@ def main():
     use_legal_mask = True
 
     loss_history = []
-    total_steps = 1000  # 1k steps = 1k epochs on 1 batches dataset, 1 epoch on 1k batches dataset
+    total_steps = 2000  # 2k batches... roughly takes 60s with current model
     steps = 0
     epoch = 0
+    policy_loss_history = []
+    value_loss_history = []
+
     while steps < total_steps:
         total_loss = torch.tensor(0.).to(device)
+        total_policy_loss = torch.tensor(0.).to(device)
+        total_value_loss = torch.tensor(0.).to(device)
         for i, batch in enumerate(dataloader):
             x = batch['board_tensor'].to(device)                    # (B, 7, 8, 8)
             y1 = batch['child_visit_counts'].float().to(device)     # (B, 4096)
@@ -105,27 +109,36 @@ def main():
 
             loss = value_loss + policy_loss
             total_loss += loss * x.shape[0]
+            total_policy_loss += policy_loss * x.shape[0]
+            total_value_loss += value_loss * x.shape[0]
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             if i % 100 == 0:
-                print(f"  Batch {i}\tLoss: {loss.item():.4f}")
+                print(f"\tBatch {i:4}\tLoss: {loss.item():.4f} (Policy: {policy_loss.item():.4f}, Value: {value_loss.item():.4f})")
             steps += 1
 
         if steps >= total_steps:
             break
         total_loss /= len(dataset)
+        total_policy_loss /= len(dataset)
+        total_value_loss /= len(dataset)
         loss_history.append(total_loss.item())
+        policy_loss_history.append(total_policy_loss.item())
+        value_loss_history.append(total_value_loss.item())
         epoch += 1
-        print(f"Epoch {epoch} Step {steps} Loss: {total_loss.item():.4f}")
+        print(f"Epoch {epoch:2} Step {steps:4}\tLoss: {total_loss.item():.4f} (Policy: {total_policy_loss.item():.4f}, Value: {total_value_loss.item():.4f})")
 
     # After training, save loss plot
-    plt.figure()
+    plt.figure(figsize=(10, 6))
     epochs_range = list(range(1, len(loss_history) + 1))
-    plt.plot(epochs_range, loss_history, marker="o")
+    plt.plot(epochs_range, loss_history, marker="o", label="Total Loss", color="blue")
+    plt.plot(epochs_range, policy_loss_history, marker="o", label="Policy Loss", color="orange")
+    plt.plot(epochs_range, value_loss_history, marker="o", label="Value Loss", color="red")
     plt.xlabel("Epoch")
-    plt.ylabel("Avg Loss")
-    plt.title("Training Loss")
+    plt.ylabel("Loss")
+    plt.title("Training Losses")
+    plt.legend()
     plt.grid(True)
     plt.savefig("loss_plot.png")
     plt.close()

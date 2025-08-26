@@ -7,12 +7,16 @@ class ChessModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv0 = nn.Conv2d(  7, 64, 3, padding=1)
+        self.conv1 = nn.Conv2d( 64, 64, 3, padding=1)
+        self.conv2 = nn.Conv2d( 64, 64, 3, padding=1)
         self.flat = nn.Flatten()
         self.policy_head = nn.Linear(64*8*8, 4096)  # For move distribution (64x64)
         self.value_head = nn.Linear(64*8*8, 1)      # For scalar value
 
     def forward(self, x):
         x = F.relu(self.conv0(x))
+        x = x + F.relu(self.conv1(x))
+        x = x + F.relu(self.conv2(x))
         x = self.flat(x)
         policy = self.policy_head(x)
         value = self.value_head(x).squeeze(-1)
