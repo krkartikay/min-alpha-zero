@@ -37,7 +37,7 @@ class Node;
 using eval_request_t = std::pair<Node*, boost::fibers::promise<void>>;
 using eval_channel_t = boost::fibers::buffered_channel<eval_request_t>;
 using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
-using duration_t = std::chrono::duration<int, std::milli>;
+using duration_t = std::chrono::duration<int, std::micro>;
 
 // Constants -------------------------------------------------
 
@@ -58,7 +58,7 @@ class Config {
   int num_games = 100;
   int num_threads = 1;
   int moves_limit = 100;
-  duration_t eval_timeout = 1ms;
+  duration_t eval_timeout = 50us;
   std::string model_path = "model.pt";
   std::string training_file = "training_data.bin";
   bool debug = false;
