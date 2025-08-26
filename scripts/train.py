@@ -108,6 +108,8 @@ def main():
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            if i % 100 == 0:
+                print(f"  Batch {i}\tLoss: {loss.item():.4f}")
             steps += 1
 
         if steps >= total_steps:

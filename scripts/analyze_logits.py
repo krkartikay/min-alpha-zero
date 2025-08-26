@@ -100,6 +100,8 @@ def plot_logits_comparison():
             if f.endswith(".pt"):
                 models.append(f"out/{f}")
 
+    models = models[-3:]  # Keep only the latest 3 models
+
     results = []
     for model_path in models:
         if os.path.exists(model_path):
