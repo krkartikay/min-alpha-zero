@@ -93,14 +93,14 @@ GameResult play_agent_vs_agent(ChessAgent& agent, ChessAgent& other,
   bool is_game_over = (result.first != chess::GameResultReason::NONE);
   chess::GameResult game_result = result.second;
 
-  LOG(INFO) << absl::StrFormat(
-      "Game finished. Moves: %d, Result: %s", moves_played,
-      !is_game_over ? "Incomplete"
-      : game_result == chess::GameResult::DRAW
-          ? "Draw"
-          : (game.root->board.sideToMove() == chess::Color::BLACK
-                 ? "White wins"
-                 : "Black wins"));
+  // LOG(INFO) << absl::StrFormat(
+  //     "Game finished. Moves: %d, Result: %s", moves_played,
+  //     !is_game_over ? "Incomplete"
+  //     : game_result == chess::GameResult::DRAW
+  //         ? "Draw"
+  //         : (game.root->board.sideToMove() == chess::Color::BLACK
+  //                ? "White wins"
+  //                : "Black wins"));
 
   if (!is_game_over || game_result == chess::GameResult::DRAW) {
     return {moves_played, 0, 1, 0};
