@@ -97,8 +97,8 @@ def main():
 
             policy_logits, value_pred = model(x)  # (B, 4096), (B,)
             if use_legal_mask:
-                policy_logits *= legal_mask
-                # policy_logits = policy_logits.masked_fill(~legal_mask.bool(), -1e10)
+                # policy_logits *= legal_mask
+                policy_logits = policy_logits.masked_fill(~legal_mask.bool(), -1e10)
 
             value_loss = F.mse_loss(value_pred, y2)
 
