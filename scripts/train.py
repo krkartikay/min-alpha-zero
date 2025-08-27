@@ -70,8 +70,7 @@ def main():
     # Load model
     model = torch.jit.load("model.pt").to(device)
     model.train()
-    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=l2_weight, betas=(0.9, 0.999))
-    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.98)
+    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=l2_weight)
 
     losses = []
 
@@ -99,6 +98,7 @@ def main():
             policy_logits, value_pred = model(x)  # (B, 4096), (B,)
             if use_legal_mask:
                 policy_logits *= legal_mask
+                # policy_logits = policy_logits.masked_fill(~legal_mask.bool(), -1e10)
 
             value_loss = F.mse_loss(value_pred, y2)
 
@@ -116,12 +116,10 @@ def main():
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
-            if steps % 100 == 0:  # Step scheduler less frequently
-                scheduler.step()
 
-            if i % 100 == 0:
+            if (i + 1) % 100 == 0:
                 print(
-                    f"\tBatch {i:4}\tLoss: {loss.item():.4f} (Policy: {policy_loss.item():.4f}, Value: {value_loss.item():.4f})"
+                    f"\tBatch {i+1:4}\tLoss: {loss.item():.4f} (Policy: {policy_loss.item():.4f}, Value: {value_loss.item():.4f})"
                 )
                 loss_history.append(loss.item())
                 policy_loss_history.append(policy_loss.item())
