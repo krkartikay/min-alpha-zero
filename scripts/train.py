@@ -4,7 +4,7 @@ import sys
 import torch
 import time
 import numpy as np
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 import torch.optim as optim
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
@@ -46,6 +46,44 @@ def get_next_model_path(out_dir="out"):
     return os.path.join(out_dir, f"model_{next_num:03d}.pt")
 
 
+def evaluate_test_loss(model, dataloader, device, use_legal_mask):
+    model.eval()
+    total_loss = 0.0
+    total_policy_loss = 0.0
+    total_value_loss = 0.0
+    count = 0
+    with torch.no_grad():
+        for batch in dataloader:
+            x = batch["board_tensor"].to(device)
+            y1 = batch["child_visit_counts"].float().to(device)
+            y2 = batch["final_value"].float().to(device)
+            legal_mask = batch["legal_mask"].to(device)
+
+            policy_logits, value_pred = model(x)
+            if use_legal_mask:
+                policy_logits = policy_logits.masked_fill(~legal_mask.bool(), -1e10)
+
+            value_loss = F.mse_loss(value_pred, y2)
+            target_policy = y1 / (y1.sum(dim=1, keepdim=True) + 1e-6)
+            log_probs = F.log_softmax(policy_logits, dim=1)
+            log_target_policy = target_policy.clamp(min=1e-12).log()
+            policy_loss = (
+                (target_policy * (log_target_policy - log_probs)).sum(dim=1).mean()
+            )
+            loss = value_loss + policy_loss
+
+            total_loss += loss.item() * x.size(0)
+            total_policy_loss += policy_loss.item() * x.size(0)
+            total_value_loss += value_loss.item() * x.size(0)
+            count += x.size(0)
+    model.train()
+    return (
+        total_loss / count,
+        total_policy_loss / count,
+        total_value_loss / count,
+    )
+
+
 def main():
     # Hyperparameters
     batch_size = 2048
@@ -58,10 +96,24 @@ def main():
 
     # Dataset and DataLoader
     dataset = TrainingDataset("training_data.bin")
-    dataloader = DataLoader(
-        dataset,
+    # Train/test split
+    test_ratio = 0.01
+    test_size = int(len(dataset) * test_ratio)
+    train_size = len(dataset) - test_size
+    train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+    train_dataloader = DataLoader(
+        train_dataset,
         batch_size=batch_size,
         shuffle=True,
+        num_workers=max(1, os.cpu_count() // 2),
+        pin_memory=True,
+        persistent_workers=True,
+        prefetch_factor=4,
+    )
+    test_dataloader = DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
         num_workers=max(1, os.cpu_count() // 2),
         pin_memory=True,
         persistent_workers=True,
@@ -76,7 +128,9 @@ def main():
     losses = []
 
     print("Starting training...")
-    print(f"Dataset size = {len(dataset)} ({len(dataloader)} batches)")
+    print(
+        f"Dataset size = {len(dataset)} ({len(train_dataloader)} train batches, {len(test_dataloader)} test batches)"
+    )
 
     use_legal_mask = True
 
@@ -86,10 +140,13 @@ def main():
     epoch = 0
     policy_loss_history = []
     value_loss_history = []
+    test_loss_history = []
+    test_policy_loss_history = []
+    test_value_loss_history = []
     batch_count = 0
 
     while epoch <= 3:
-        for i, batch in enumerate(dataloader):
+        for i, batch in enumerate(train_dataloader):
             x = batch["board_tensor"].to(device)  # (B, 7, 8, 8)
             y1 = batch["child_visit_counts"].float().to(device)  # (B, 4096)
             y2 = batch["final_value"].float().to(device)  # (B,)
@@ -125,6 +182,28 @@ def main():
             policy_loss_history.append(min(1, policy_loss.item()))
             value_loss_history.append(min(1, value_loss.item()))
 
+            # Evaluate test loss every 100 batches
+            if (i + 1) % 100 == 0:
+                test_loss, test_policy_loss, test_value_loss = evaluate_test_loss(
+                    model, test_dataloader, device, use_legal_mask
+                )
+                test_loss_history.append(min(1, test_loss))
+                test_policy_loss_history.append(min(1, test_policy_loss))
+                test_value_loss_history.append(min(1, test_value_loss))
+                print(
+                    f"\t\tTest Loss: {test_loss:.4f} (Policy: {test_policy_loss:.4f}, Value: {test_value_loss:.4f})"
+                )
+            else:
+                # Keep test loss history in sync for plotting
+                if len(test_loss_history) > 0:
+                    test_loss_history.append(test_loss_history[-1])
+                    test_policy_loss_history.append(test_policy_loss_history[-1])
+                    test_value_loss_history.append(test_value_loss_history[-1])
+                else:
+                    test_loss_history.append(0)
+                    test_policy_loss_history.append(0)
+                    test_value_loss_history.append(0)
+
             batch_count += 1
             steps += 1
 
@@ -137,7 +216,7 @@ def main():
         batch_indices,
         loss_history,
         marker=".",
-        label="Total Loss",
+        label="Train Total Loss",
         color="blue",
         markersize=4,
     )
@@ -145,7 +224,7 @@ def main():
         batch_indices,
         policy_loss_history,
         marker=".",
-        label="Policy Loss",
+        label="Train Policy Loss",
         color="orange",
         markersize=4,
     )
@@ -153,13 +232,40 @@ def main():
         batch_indices,
         value_loss_history,
         marker=".",
-        label="Value Loss",
+        label="Train Value Loss",
         color="red",
         markersize=4,
     )
+    plt.plot(
+        batch_indices,
+        test_loss_history,
+        marker=".",
+        label="Test Total Loss",
+        color="green",
+        markersize=4,
+        linestyle="dashed",
+    )
+    plt.plot(
+        batch_indices,
+        test_policy_loss_history,
+        marker=".",
+        label="Test Policy Loss",
+        color="purple",
+        markersize=4,
+        linestyle="dashed",
+    )
+    plt.plot(
+        batch_indices,
+        test_value_loss_history,
+        marker=".",
+        label="Test Value Loss",
+        color="brown",
+        markersize=4,
+        linestyle="dashed",
+    )
     plt.xlabel("Batch Number")
     plt.ylabel("Loss")
-    plt.title("Training Losses (per 100 batches)")
+    plt.title("Training and Test Losses (per 100 batches)")
     plt.legend()
     plt.grid(True)
     plt.savefig("loss_plot.png")
