@@ -6,14 +6,16 @@ import torch.nn.functional as F
 class ChessModel(nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv0 = nn.Conv2d(  7, 64, 3, padding=1)
+        self.conv1 = nn.Conv2d(7, 64, 5, padding=2)
         self.flat = nn.Flatten()
-        self.policy_head = nn.Linear(64*8*8, 4096)  # For move distribution (64x64)
-        self.value_head = nn.Linear(64*8*8, 1)      # For scalar value
+        self.fc1 = nn.Linear(64 * 8 * 8, 2048)
+        self.policy_head = nn.Linear(2048, 4096)
+        self.value_head = nn.Linear(2048, 1)
 
     def forward(self, x):
-        x = F.relu(self.conv0(x))
+        x = F.relu(self.conv1(x))
         x = self.flat(x)
+        x = F.relu(self.fc1(x))
         policy = self.policy_head(x)
         value = self.value_head(x).squeeze(-1)
         return policy, value
@@ -28,6 +30,12 @@ class ChessModel(nn.Module):
 
 def export_model(model):
     model.eval()
+
+    # Count parameters
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Total parameters: {total_params:,}")
+    print(f"Trainable parameters: {trainable_params:,}")
 
     # Create dummy input
     dummy_input = torch.randn(1, 7, 8, 8)

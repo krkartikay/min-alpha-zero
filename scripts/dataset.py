@@ -20,18 +20,20 @@ DT = np.dtype(
 
 class TrainingDataset(Dataset):
     def __init__(self, filename):
-        self.records = np.fromfile(filename, dtype=DT)
+        self.memmap = np.memmap(filename, dtype=DT, mode="r")
 
     def __len__(self):
-        return len(self.records)
+        return len(self.memmap)
 
     def __getitem__(self, idx):
-        rec = self.records[idx]
-        board_tensor = torch.from_numpy(rec["board_tensor"]).float().reshape(7, 8, 8)
-        legal_mask = torch.from_numpy(rec["legal_mask"]).bool()
-        policy = torch.from_numpy(rec["policy"]).float()
-        child_visit_counts = torch.from_numpy(rec["child_visit_counts"]).int()
-        child_values = torch.from_numpy(rec["child_values"]).float()
+        rec = self.memmap[idx]
+        board_tensor = (
+            torch.from_numpy(rec["board_tensor"].copy()).float().reshape(7, 8, 8)
+        )
+        legal_mask = torch.from_numpy(rec["legal_mask"].copy()).bool()
+        policy = torch.from_numpy(rec["policy"].copy()).float()
+        child_visit_counts = torch.from_numpy(rec["child_visit_counts"].copy()).int()
+        child_values = torch.from_numpy(rec["child_values"].copy()).float()
         value = torch.tensor(rec["value"], dtype=torch.float32)
         final_value = torch.tensor(rec["final_value"], dtype=torch.int32)
         return {
