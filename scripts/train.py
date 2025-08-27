@@ -49,8 +49,9 @@ def get_next_model_path(out_dir="out"):
 def main():
     # Hyperparameters
     batch_size = 2048
-    lr = 3e-4
+    lr = 5e-3
     l2_weight = 1e-4  # Standard regularization
+    print_loss_every_N_batches = 10
 
     # Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -81,14 +82,13 @@ def main():
 
     loss_history = []
     start_time = time.time()
-    timeout = 30  # 60 seconds
     steps = 0
     epoch = 0
     policy_loss_history = []
     value_loss_history = []
     batch_count = 0
 
-    while time.time() - start_time < timeout:
+    while epoch <= 3:
         for i, batch in enumerate(dataloader):
             x = batch["board_tensor"].to(device)  # (B, 7, 8, 8)
             y1 = batch["child_visit_counts"].float().to(device)  # (B, 4096)
@@ -117,9 +117,10 @@ def main():
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
-            print(
-                f"\tBatch {i+1:4}\tLoss: {loss.item():.4f} (Policy: {policy_loss.item():.4f}, Value: {value_loss.item():.4f})"
-            )
+            if (i + 1) % print_loss_every_N_batches == 0:
+                print(
+                    f"\tBatch {i+1:4}\tLoss: {loss.item():.4f} (Policy: {policy_loss.item():.4f}, Value: {value_loss.item():.4f})"
+                )
             loss_history.append(min(1, loss.item()))
             policy_loss_history.append(min(1, policy_loss.item()))
             value_loss_history.append(min(1, value_loss.item()))
@@ -127,12 +128,7 @@ def main():
             batch_count += 1
             steps += 1
 
-            if time.time() - start_time >= timeout:
-                break
-
         epoch += 1
-        if time.time() - start_time >= timeout:
-            break
 
     # After training, save loss plot
     plt.figure(figsize=(12, 6))

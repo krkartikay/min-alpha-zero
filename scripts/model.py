@@ -7,17 +7,13 @@ class ChessModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv1 = nn.Conv2d(7, 64, 5, padding=2)
-        # self.conv2 = nn.Conv2d(64, 64, 5, padding=2)
-        # self.conv3 = nn.Conv2d(64, 64, 5, padding=2)
         self.flat = nn.Flatten()
-        self.fc1 = nn.Linear(64 * 8 * 8, 2048)
-        self.policy_head = nn.Linear(2048, 4096)
-        self.value_head = nn.Linear(2048, 1)
+        self.fc1 = nn.Linear(64 * 8 * 8, 4096)
+        self.policy_head = nn.Linear(4096, 4096)
+        self.value_head = nn.Linear(4096, 1)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
-        # x = x + F.relu(self.conv2(x))
-        # x = x + F.relu(self.conv3(x))
         x = self.flat(x)
         x = F.relu(self.fc1(x))
         policy = self.policy_head(x)
