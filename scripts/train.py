@@ -48,7 +48,7 @@ def get_next_model_path(out_dir="out"):
 
 def main():
     # Hyperparameters
-    batch_size = 512  # Back to working batch size
+    batch_size = 2048  # Back to working batch size
     lr = 5e-3  # High but stable learning rate
     l2_weight = 1e-4  # Standard regularization
 
@@ -121,9 +121,9 @@ def main():
                 print(
                     f"\tBatch {i+1:4}\tLoss: {loss.item():.4f} (Policy: {policy_loss.item():.4f}, Value: {value_loss.item():.4f})"
                 )
-                loss_history.append(loss.item())
-                policy_loss_history.append(policy_loss.item())
-                value_loss_history.append(value_loss.item())
+            loss_history.append(loss.item())
+            policy_loss_history.append(policy_loss.item())
+            value_loss_history.append(value_loss.item())
 
             batch_count += 1
             steps += 1
