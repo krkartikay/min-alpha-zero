@@ -48,8 +48,8 @@ def get_next_model_path(out_dir="out"):
 
 def main():
     # Hyperparameters
-    batch_size = 2048  # Back to working batch size
-    lr = 5e-3  # High but stable learning rate
+    batch_size = 2048
+    lr = 3e-4
     l2_weight = 1e-4  # Standard regularization
 
     # Device
@@ -81,7 +81,7 @@ def main():
 
     loss_history = []
     start_time = time.time()
-    timeout = 60  # 60 seconds
+    timeout = 30  # 60 seconds
     steps = 0
     epoch = 0
     policy_loss_history = []
@@ -117,13 +117,12 @@ def main():
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
-            if (i + 1) % 100 == 0:
-                print(
-                    f"\tBatch {i+1:4}\tLoss: {loss.item():.4f} (Policy: {policy_loss.item():.4f}, Value: {value_loss.item():.4f})"
-                )
-            loss_history.append(loss.item())
-            policy_loss_history.append(policy_loss.item())
-            value_loss_history.append(value_loss.item())
+            print(
+                f"\tBatch {i+1:4}\tLoss: {loss.item():.4f} (Policy: {policy_loss.item():.4f}, Value: {value_loss.item():.4f})"
+            )
+            loss_history.append(min(1, loss.item()))
+            policy_loss_history.append(min(1, policy_loss.item()))
+            value_loss_history.append(min(1, value_loss.item()))
 
             batch_count += 1
             steps += 1
@@ -137,7 +136,7 @@ def main():
 
     # After training, save loss plot
     plt.figure(figsize=(12, 6))
-    batch_indices = list(range(0, len(loss_history) * 100, 100))
+    batch_indices = list(range(0, len(loss_history)))
     plt.plot(
         batch_indices,
         loss_history,
